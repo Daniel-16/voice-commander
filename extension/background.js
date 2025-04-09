@@ -154,3 +154,119 @@ async function executeCommand(command) {
     console.log("Error result", result);
   }
 }
+
+function domClick(selector) {
+  try {
+    const element = document.querySelector(selector);
+    if (element) {
+      element.click();
+    } else {
+      const elements = Array.from(
+        document.querySelectorAll(
+          'button, a, input[type="button"], input[type="submit"]'
+        )
+      );
+      const textMatch = elements.find(
+        (el) =>
+          el.textContent
+            .trim()
+            .toLowerCase()
+            .includes(selector.toLowerCase()) ||
+          el.value?.trim().toLowerCase().includes(selector.toLowerCase()) ||
+          el
+            .getAttribute("aria-label")
+            ?.toLowerCase()
+            .includes(selector.toLowerCase())
+      );
+      if (textMatch) {
+        textMatch.click();
+      } else {
+        console.error(
+          `Voice Commander: Element not found for selector "${selector}"`
+        );
+      }
+    }
+  } catch (e) {
+    console.error(`Voice Commander: Error clicking selector "${selector}":`, e);
+  }
+}
+
+function domScroll(pixels) {
+  if (pixels === 0) {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  } else if (pixels > 5000) {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+  } else {
+    window.scrollBy({ top: pixels, behavior: "smooth" });
+  }
+}
+
+function domType(selector, text) {
+  try {
+    const element = document.querySelector(selector);
+    if (
+      element &&
+      (element.tagName === "INPUT" ||
+        element.tagName === "TEXTAREA" ||
+        element.isContentEditable)
+    ) {
+      element.focus();
+      element.value = text;
+      element.dispatchEvent(new Event("input", { bubbles: true }));
+      element.dispatchEvent(new Event("change", { bubbles: true }));
+      element.blur();
+    } else {
+      console.error(
+        `Voice Commander: Element not found or not typable for selector "${selector}"`
+      );
+    }
+  } catch (e) {
+    console.error(
+      `Voice Commander: Error typing in selector "${selector}":`,
+      e
+    );
+  }
+}
+
+function updatePopupStatus(statusText) {
+  chrome.runtime
+    .sendMessage({ type: "statusUpdate", status: statusText })
+    .catch((err) => {
+      if (
+        err.message !==
+        "Could not establish connection. Receiving end does not exist."
+      ) {
+        console.warn("Could not send status to popup:", err.message);
+      }
+    });
+}
+
+connect();
+// chrome.alarms.create('keepAlive', { periodInMinutes: 4.8 });
+// chrome.alarms.onAlarm.addListener(alarm => {
+//   if (alarm.name === 'keepAlive') {
+//     console.log('Keep alive alarm fired');
+//     // You might check connection status here or perform a no-op
+//   }
+// });
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === "getStatus") {
+    const currentStatus =
+      socket && socket.readyState === WebSocket.OPEN
+        ? "Connected"
+        : "Disconnected";
+    sendResponse({ status: currentStatus });
+    return true;
+  }
+  if (message.type === "reconnect") {
+    console.log("Reconnect requested from popup");
+    if (socket) {
+      socket.close();
+    } else {
+      connect();
+    }
+    sendResponse({ status: "Reconnecting..." });
+    return true;
+  }
+});
