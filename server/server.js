@@ -11,16 +11,45 @@ if (!API_KEY) {
 }
 
 const genAi = new GoogleGenerativeAI(API_KEY);
-const model = genAi.getGenerativeModel({ model: "gemini-pro" });
+const model = genAi.getGenerativeModel({ model: "gemini-2.5-pro-exp-03-25" });
+
 const wss = new WebSocketServer({ port: PORT });
 
-console.log(`Websocket started on port ${PORT}`);
+console.log(`WebSocket server started on port ${PORT}`);
 
 const clients = new Set();
 const extensions = new Set();
 
+function heartbeat() {
+  this.isAlive = true;
+}
+
+const interval = setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (ws.isAlive === false) {
+      clients.delete(ws);
+      extensions.delete(ws);
+      return ws.terminate();
+    }
+
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, 30000);
+
+wss.on("close", () => {
+  clearInterval(interval);
+});
+
+wss.on("error", (error) => {
+  console.error("WebSocket Server Error:", error);
+});
+
 wss.on("connection", (ws, req) => {
-  console.log("Client connected");
+  console.log("Client connected from:", req.socket.remoteAddress);
+  ws.isAlive = true;
+  ws.on("pong", heartbeat);
+
   clients.add(ws);
 
   const clientType = req.url === "/extensions" ? "extension" : "webapp";
@@ -56,11 +85,20 @@ wss.on("connection", (ws, req) => {
         console.log(`LLM JSON: ${JSON.stringify(commandJson)}`);
 
         if (commandJson && Object.keys(commandJson).length > 0) {
-          const commandMessage = JSON.stringify({
-            type: "command",
-            payload: commandJson,
-          });
-          broadcastToExtensions(commandMessage);
+          console.log("Broadcasting command to extensions:", commandJson);
+          broadcastToExtensions(
+            JSON.stringify({
+              type: "command",
+              payload: commandJson,
+            })
+          );
+
+          broadcastToWebApps(
+            JSON.stringify({
+              type: "message",
+              payload: "Command sent to extension",
+            })
+          );
         } else {
           console.log("Unsupported or ambiguous command");
           broadcastToWebApps(
@@ -236,9 +274,21 @@ function broadcastToWebApps(message) {
 }
 
 function broadcastToExtensions(message) {
+  let sent = false;
   extensions.forEach((client) => {
-    if (extensions.has(client)) {
+    if (client.readyState === WebSocket.OPEN) {
       safeSend(client, message);
+      sent = true;
     }
   });
+
+  if (!sent) {
+    console.warn("No connected extensions to send command to");
+    broadcastToWebApps(
+      JSON.stringify({
+        type: "message",
+        payload: "No browser extension connected",
+      })
+    );
+  }
 }

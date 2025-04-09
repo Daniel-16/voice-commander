@@ -1,4 +1,4 @@
-const WS_URL = "ws://localhost:8080/extension";
+const WS_URL = "ws://localhost:8080/extensions"; // Changed from /extension to /extensions to match server
 let socket = null;
 let reconnectInterval = 5000;
 
