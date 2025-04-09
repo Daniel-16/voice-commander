@@ -210,3 +210,13 @@ async function getCommandFromLLM(userInput) {
     throw new Error("LLM API call failed");
   }
 }
+
+function safeSend(client, message) {
+  try {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    }
+  } catch (error) {
+    console.error("Error sending message to client:", error);
+  }
+}
