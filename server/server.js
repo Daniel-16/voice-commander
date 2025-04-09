@@ -1,5 +1,5 @@
 import "dotenv/config.js";
-import { WebSocketServer } from "ws";
+import { WebSocketServer, WebSocket } from "ws";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const PORT = process.env.PORT || 8080;
@@ -19,23 +19,27 @@ console.log(`WebSocket server started on port ${PORT}`);
 
 const clients = new Set();
 const extensions = new Set();
+const registeredExtensions = new Set(); // Track properly registered extensions
 
 function heartbeat() {
   this.isAlive = true;
 }
 
+// More frequent heartbeat checks (every 15 seconds)
 const interval = setInterval(() => {
   wss.clients.forEach((ws) => {
     if (ws.isAlive === false) {
+      console.log("Client connection dead - terminating");
       clients.delete(ws);
       extensions.delete(ws);
+      registeredExtensions.delete(ws);
       return ws.terminate();
     }
 
     ws.isAlive = false;
     ws.ping();
   });
-}, 30000);
+}, 15000);
 
 wss.on("close", () => {
   clearInterval(interval);
@@ -47,106 +51,139 @@ wss.on("error", (error) => {
 
 wss.on("connection", (ws, req) => {
   console.log("Client connected from:", req.socket.remoteAddress);
+
+  // Set up connection monitoring
   ws.isAlive = true;
   ws.on("pong", heartbeat);
 
+  // Add to appropriate client set
   clients.add(ws);
-
   const clientType = req.url === "/extensions" ? "extension" : "webapp";
+
   if (clientType === "extension") {
     extensions.add(ws);
-    console.log("Extension client connected");
+    console.log("Potential extension client connected - awaiting registration");
   } else {
     console.log("Webapp client connected");
     safeSend(ws, JSON.stringify({ type: "message", payload: "Ready" }));
   }
 
   ws.on("message", async (message) => {
-    console.log("Received message:", message);
+    console.log("Received message:", message.toString());
     let data;
     try {
       data = JSON.parse(message.toString());
-    } catch (error) {
-      console.error("Error parsing message:", error);
-      safeSend(ws, JSON.stringify({ type: "error", payload: "Invalid JSON" }));
-      return;
-    }
 
-    if (data.type === "voice_command" && data.payload) {
-      const userText = data.payload;
-      console.log(`Processing user command: ${userText}`);
-
-      broadcastToWebApps(
-        JSON.stringify({ type: "message", payload: "Processing" })
-      );
-
-      try {
-        const commandJson = await getCommandFromLLM(userText);
-        console.log(`LLM JSON: ${JSON.stringify(commandJson)}`);
-
-        if (commandJson && Object.keys(commandJson).length > 0) {
-          console.log("Broadcasting command to extensions:", commandJson);
-          broadcastToExtensions(
-            JSON.stringify({
-              type: "command",
-              payload: commandJson,
-            })
-          );
-
-          broadcastToWebApps(
-            JSON.stringify({
-              type: "message",
-              payload: "Command sent to extension",
-            })
-          );
-        } else {
-          console.log("Unsupported or ambiguous command");
-          broadcastToWebApps(
-            JSON.stringify({
-              type: "message",
-              payload: "Unsupported or ambiguous command",
-            })
-          );
-          setTimeout(() => {
-            broadcastToWebApps(
-              JSON.stringify({ type: "message", payload: "Ready" })
-            );
-          }, 1500);
-        }
-      } catch (error) {
-        console.error("Error processing command:", error);
-        broadcastToWebApps(
+      // Handle extension registration
+      if (data.type === "register" && data.payload?.client === "extension") {
+        console.log("Extension registered:", data.payload);
+        registeredExtensions.add(ws);
+        safeSend(
+          ws,
           JSON.stringify({
             type: "message",
-            payload: "Error processing command",
+            payload: "Registration successful",
           })
+        );
+        return;
+      }
+
+      // Handle ping messages from extension
+      if (data.type === "ping") {
+        ws.isAlive = true; // Manual heartbeat
+        safeSend(ws, JSON.stringify({ type: "pong" }));
+        return;
+      }
+
+      if (data.type === "voice_command" && data.payload) {
+        const userText = data.payload;
+        console.log(`Processing user command: ${userText}`);
+
+        broadcastToWebApps(
+          JSON.stringify({ type: "message", payload: "Processing" })
+        );
+
+        try {
+          const commandJson = await getCommandFromLLM(userText);
+          console.log(`LLM JSON: ${JSON.stringify(commandJson)}`);
+
+          if (commandJson && Object.keys(commandJson).length > 0) {
+            console.log("Broadcasting command to extensions:", commandJson);
+
+            // Check for registered extensions
+            if (registeredExtensions.size === 0) {
+              broadcastToWebApps(
+                JSON.stringify({
+                  type: "error",
+                  payload:
+                    "No browser extension connected. Please install and enable the extension.",
+                })
+              );
+              return;
+            }
+
+            broadcastToRegisteredExtensions(
+              JSON.stringify({
+                type: "command",
+                payload: commandJson,
+              })
+            );
+
+            broadcastToWebApps(
+              JSON.stringify({
+                type: "message",
+                payload: "Command sent to extension",
+              })
+            );
+          } else {
+            console.log("Unsupported or ambiguous command");
+            broadcastToWebApps(
+              JSON.stringify({
+                type: "error",
+                payload:
+                  "Unsupported or ambiguous command. Please try rephrasing.",
+              })
+            );
+          }
+        } catch (error) {
+          console.error("Error processing command:", error);
+          broadcastToWebApps(
+            JSON.stringify({
+              type: "error",
+              payload: "Error processing command: " + error.message,
+            })
+          );
+        }
+      } else if (data.type === "execution_confirmation") {
+        console.log("Execution confirmation received:", data.payload);
+        broadcastToWebApps(
+          JSON.stringify({ type: "message", payload: "Execution confirmed" })
         );
         setTimeout(() => {
           broadcastToWebApps(
             JSON.stringify({ type: "message", payload: "Ready" })
           );
         }, 1500);
+      } else if (data.type === "execution_error") {
+        console.error("Execution error from extension:", data.payload);
+        broadcastToWebApps(
+          JSON.stringify({
+            type: "error",
+            payload: `Extension error: ${data.payload.error}`,
+          })
+        );
+        setTimeout(() => {
+          broadcastToWebApps(
+            JSON.stringify({ type: "message", payload: "Ready" })
+          );
+        }, 2000);
       }
-    } else if (data.type === "execution_confirmation" && data.payload) {
-      console.log("Execution confirmation received:", data.payload);
-      broadcastToWebApps(
-        JSON.stringify({ type: "message", payload: "Execution confirmed" })
+    } catch (error) {
+      console.error("Error parsing message:", error);
+      safeSend(
+        ws,
+        JSON.stringify({ type: "error", payload: "Invalid message format" })
       );
-      setTimeout(() => {
-        broadcastToWebApps(
-          JSON.stringify({ type: "message", payload: "Ready" })
-        );
-      }, 1500);
-    } else if (data.type === "execution_error" && data.payload) {
-      console.error("Execution error from extension:", data.payload);
-      broadcastToWebApps(
-        JSON.stringify({ type: "message", payload: "Execution error" })
-      );
-      setTimeout(() => {
-        broadcastToWebApps(
-          JSON.stringify({ type: "message", payload: "Ready" })
-        );
-      }, 2000);
     }
   });
 
@@ -154,12 +191,14 @@ wss.on("connection", (ws, req) => {
     console.log("Client disconnected");
     clients.delete(ws);
     extensions.delete(ws);
+    registeredExtensions.delete(ws);
   });
 
   ws.on("error", (error) => {
     console.error("WebSocket error:", error);
     clients.delete(ws);
     extensions.delete(ws);
+    registeredExtensions.delete(ws);
   });
 });
 
@@ -194,6 +233,8 @@ async function getCommandFromLLM(userInput) {
         Examples:
 
         "open YouTube" -> { "action": "open_url", "value": "youtube.com" }
+
+        "Show me dog videos" -> { "action": "open_url", "value": "youtube.com/results?search_query=dog+videos" }
 
         "open tech crunch dot com" -> { "action": "open_url", "value": "techcrunch.com" }
 
@@ -284,6 +325,26 @@ function broadcastToExtensions(message) {
 
   if (!sent) {
     console.warn("No connected extensions to send command to");
+    broadcastToWebApps(
+      JSON.stringify({
+        type: "message",
+        payload: "No browser extension connected",
+      })
+    );
+  }
+}
+
+function broadcastToRegisteredExtensions(message) {
+  let sent = false;
+  registeredExtensions.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      safeSend(client, message);
+      sent = true;
+    }
+  });
+
+  if (!sent) {
+    console.warn("No connected registered extensions to send command to");
     broadcastToWebApps(
       JSON.stringify({
         type: "message",

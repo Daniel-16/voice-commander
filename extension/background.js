@@ -1,4 +1,4 @@
-const WS_URL = "ws://localhost:8080/extensions"; // Changed from /extension to /extensions to match server
+const WS_URL = "ws://localhost:8080/extension";
 let socket = null;
 let reconnectInterval = 5000;
 
@@ -161,6 +161,7 @@ function domClick(selector) {
     if (element) {
       element.click();
     } else {
+      // Try finding by text content as a fallback for simple cases
       const elements = Array.from(
         document.querySelectorAll(
           'button, a, input[type="button"], input[type="submit"]'
@@ -184,6 +185,8 @@ function domClick(selector) {
         console.error(
           `Voice Commander: Element not found for selector "${selector}"`
         );
+        // Cannot easily send error back from injected script without complex messaging
+        // throw new Error(`Element not found: ${selector}`); // This error won't reach background.js easily
       }
     }
   } catch (e) {
@@ -193,8 +196,10 @@ function domClick(selector) {
 
 function domScroll(pixels) {
   if (pixels === 0) {
+    // Scroll to top
     window.scrollTo({ top: 0, behavior: "smooth" });
   } else if (pixels > 5000) {
+    // Scroll to bottom heuristic
     window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
   } else {
     window.scrollBy({ top: pixels, behavior: "smooth" });
@@ -210,8 +215,12 @@ function domType(selector, text) {
         element.tagName === "TEXTAREA" ||
         element.isContentEditable)
     ) {
+      // Focus, clear existing (optional), type, and blur
       element.focus();
+      // element.value = ''; // Optional: clear before typing
+      // Simulate typing character by character might trigger more events if needed
       element.value = text;
+      // Dispatch input/change events to potentially trigger framework updates
       element.dispatchEvent(new Event("input", { bubbles: true }));
       element.dispatchEvent(new Event("change", { bubbles: true }));
       element.blur();
@@ -227,11 +236,14 @@ function domType(selector, text) {
     );
   }
 }
+// --- End DOM Functions ---
 
+// Function to update popup status (if popup is open)
 function updatePopupStatus(statusText) {
   chrome.runtime
     .sendMessage({ type: "statusUpdate", status: statusText })
     .catch((err) => {
+      // Ignore error if popup is not open / listening
       if (
         err.message !==
         "Could not establish connection. Receiving end does not exist."
@@ -241,14 +253,17 @@ function updatePopupStatus(statusText) {
     });
 }
 
+// Initial connection attempt
 connect();
-// chrome.alarms.create('keepAlive', { periodInMinutes: 4.8 });
-// chrome.alarms.onAlarm.addListener(alarm => {
-//   if (alarm.name === 'keepAlive') {
-//     console.log('Keep alive alarm fired');
-//     // You might check connection status here or perform a no-op
-//   }
-// });
+
+// Optional: Keep service worker alive mechanism (use alarms if needed for longer tasks)
+chrome.alarms.create('keepAlive', { periodInMinutes: 4.8 });
+chrome.alarms.onAlarm.addListener(alarm => {
+  if (alarm.name === 'keepAlive') {
+    console.log('Keep alive alarm fired');
+    // You might check connection status here or perform a no-op
+  }
+});
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "getStatus") {
