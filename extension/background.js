@@ -39,3 +39,19 @@ function connect() {
     socket = null;
   };
 }
+
+function safeSend(data) {
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    try {
+      socket.send(JSON.stringify(data));
+      console.log("Sent message: ", data);
+      return true;
+    } catch (error) {
+      console.error("Error sending message", error);
+      return false;
+    }
+  } else {
+    console.warn("Cannot send message, WebSocket not open");
+    return false;
+  }
+}
