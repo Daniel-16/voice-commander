@@ -220,3 +220,25 @@ function safeSend(client, message) {
     console.error("Error sending message to client:", error);
   }
 }
+
+function broadcast(message) {
+  clients.forEach((client) => {
+    safeSend(client, message);
+  });
+}
+
+function broadcastToWebApps(message) {
+  clients.forEach((client) => {
+    if (!extensions.has(client)) {
+      safeSend(client, message);
+    }
+  });
+}
+
+function broadcastToExtensions(message) {
+  extensions.forEach((client) => {
+    if (extensions.has(client)) {
+      safeSend(client, message);
+    }
+  });
+}
