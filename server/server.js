@@ -125,4 +125,88 @@ wss.on("connection", (ws, req) => {
   });
 });
 
+async function getCommandFromLLM(userInput) {
+  const prompt = `
+        Convert voice input to JSON for browser control. Supported actions:
 
+        open_url: URL (e.g., "youtube.com")
+
+        click: CSS selector (e.g., ".btn")
+        scroll: Pixels (e.g., 300 for down, -300 for up)
+        type: { "selector": "#field", "text": "value" }
+        navigate: "back", "forward", "refresh"
+        close_tab: No value
+
+        Rules:
+
+        Output strictly JSON: { "action": "ACTION_NAME", "value": VALUE } or {} if unsupported.
+
+        Infer HTTPS URLs and common domains (e.g., "Google" -> "google.com", "YouTube" -> "youtube.com"). For "open google.com", use "google.com".
+
+        For scrolling, "down" usually means 300 pixels, "up" means -300. "scroll to top" means 0, "scroll to bottom" means a very large positive number like 10000. Infer pixel value if not specified.
+
+        For clicking, try to infer a CSS selector like a class, ID, or attribute. E.g. "click login" might be ".login", "#login-button", or "[aria-label='login']". Prioritize simple selectors. Use the text itself if no other cue exists, like "button containing 'Submit'". For simple link text like "click products", try "a:contains('products')" or similar. Be specific. If target is ambiguous (e.g. "click button"), output {}.
+
+        For typing, identify the text and the target field selector. E.g., "type hello world in the search box" -> { "action": "type", "value": { "selector": "#search", "text": "hello world" } }. Infer common selectors like '#search' or 'input[name="q"]' for search. If target field is unclear, output {}.
+
+        If the command is ambiguous, unsupported, conversational, or doesn't match any action, output {}.
+
+        Ensure the output is only the JSON object or {}.
+
+        Examples:
+
+        "open YouTube" -> { "action": "open_url", "value": "youtube.com" }
+
+        "open tech crunch dot com" -> { "action": "open_url", "value": "techcrunch.com" }
+
+        "click the login button" -> { "action": "click", "value": ".login" } (or #login-button, etc.)
+
+        "click sign up" -> { "action": "click", "value": "[aria-label='sign up']" } (example)
+
+        "scroll down a bit" -> { "action": "scroll", "value": 300 }
+
+        "scroll up" -> { "action": "scroll", "value": -300 }
+
+        "scroll to the top" -> { "action": "scroll", "value": 0 }
+
+        "type hello world in search" -> { "action": "type", "value": { "selector": "#search", "text": "hello world" } }
+
+        "type my username in the user field" -> { "action": "type", "value": { "selector": "#username", "text": "my username" } }
+
+        "go back" -> { "action": "navigate", "value": "back" }
+
+        "refresh the page" -> { "action": "navigate", "value": "refresh" }
+
+        "go forward" -> { "action": "navigate", "value": "forward" }
+
+        "close this tab" -> { "action": "close_tab", "value": null }
+
+        "what is the weather" -> {}
+
+        "fly to the moon" -> {}
+
+        "make me a sandwich" -> {}
+
+        Input: ${userInput}
+        Output:
+`;
+  try {
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text().trim();
+    const jsonString = text.replace(/^```json\s*|```$/g, "").trim();
+    const parsedJson = JSON.parse(jsonString);
+
+    if (typeof parsedJson === "object" && parsedJson !== null) {
+      if (Object.keys(parsedJson).length === 0) return {};
+      if (parsedJson.action && typeof parsedJson.action === "string") {
+        return parsedJson;
+      }
+    }
+    console.warn("LLM output is not a valid JSON object:", text);
+    return {};
+  } catch (error) {
+    console.error("Error parsing JSON from LLM output:", error);
+    throw new Error("LLM API call failed");
+  }
+}
