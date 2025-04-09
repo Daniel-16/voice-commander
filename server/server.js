@@ -1,5 +1,5 @@
-import "dotenv/config";
-import WebSocket from "ws";
+import "dotenv/config.js";
+import { WebSocketServer } from "ws";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const PORT = process.env.PORT || 8080;
@@ -12,7 +12,7 @@ if (!API_KEY) {
 
 const genAi = new GoogleGenerativeAI(API_KEY);
 const model = genAi.getGenerativeModel({ model: "gemini-pro" });
-const wss = new WebSocket.Server({ port: PORT });
+const wss = new WebSocketServer({ port: PORT });
 
 console.log(`Websocket started on port ${PORT}`);
 
@@ -38,7 +38,7 @@ wss.on("connection", (ws, req) => {
     try {
       data = JSON.parse(message.toString());
     } catch (error) {
-      consoler.error("Error parsing message:", error);
+      console.error("Error parsing message:", error);
       safeSend(ws, JSON.stringify({ type: "error", payload: "Invalid JSON" }));
       return;
     }
