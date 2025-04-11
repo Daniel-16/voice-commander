@@ -1,7 +1,7 @@
 import "dotenv/config.js";
 import { WebSocketServer, WebSocket } from "ws";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { browserControlPrompt } from "./config/prompt";
+import { browserControlPrompt } from "./config/prompt.js";
 
 const PORT = process.env.PORT || 8080;
 const API_KEY = process.env.GOOGLE_API_KEY;
