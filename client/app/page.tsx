@@ -201,13 +201,7 @@ export default function HomePage() {
         }
       }, 1000);
     }
-  };
-
-  const handleKeyPress = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter") {
-      sendCommandText();
-    }
-  };
+  };  
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4 md:p-8 bg-gradient-to-br from-gray-50 to-gray-100">
