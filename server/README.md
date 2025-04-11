@@ -1,4 +1,4 @@
-# Voice Commander Server
+# Alris Server
 
 WebSocket server that processes commands and coordinates communication between the web client and Chrome extension.
 

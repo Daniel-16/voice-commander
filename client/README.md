@@ -1,4 +1,4 @@
-# Voice Commander Client
+# Alris Client
 
 The client-side web application built with Next.js, providing a user interface for sending voice and text commands.
 

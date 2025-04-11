@@ -1,7 +1,7 @@
 {
-  "name": "server",
+  "name": "alris-server",
   "version": "1.0.0",
-  "description": "",
+  "description": "Alris server component for processing and routing browser commands",
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
@@ -12,8 +12,9 @@
   "license": "MIT",
   "type": "module",
   "dependencies": {
-    "@google/generative-ai": "^0.24.0",
-    "dotenv": "^16.4.7",
-    "ws": "^8.18.1"
+    "@google/generative-ai": "latest",
+    "dotenv": "^16.3.1",
+    "ws": "^8.13.0",
+    "@google-cloud/speech": "^6.1.0"
   }
 }

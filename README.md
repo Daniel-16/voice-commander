@@ -1,6 +1,6 @@
-# Voice Commander
+# Alris
 
-A voice command system that allows users to control their browser through voice or text commands. The project consists of three main components:
+A powerful command system that allows users to control their browser through voice or text commands. The project consists of three main components:
 
 ## Project Structure
 
@@ -41,6 +41,7 @@ npm run dev
 A Next.js application that provides the user interface for sending commands and displaying responses. Connects to the server via WebSocket.
 
 Features:
+
 - Voice command input
 - Text command input
 - Real-time response display
@@ -51,6 +52,7 @@ Features:
 A Node.js WebSocket server that processes commands and communicates between the client and browser extension.
 
 Features:
+
 - Command processing
 - WebSocket communication
 - Error handling
@@ -61,6 +63,7 @@ Features:
 A Chrome extension that executes browser commands received from the server.
 
 Features:
+
 - Tab management
 - Navigation control
 - Bookmark handling

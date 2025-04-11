@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Voice Commander",
+  "name": "Alris",
   "version": "1.0",
   "description": "Executes browser commands received via WebSocket.",
   "permissions": ["tabs", "scripting", "activeTab"],

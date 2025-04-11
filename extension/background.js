@@ -1,7 +1,6 @@
-// voice-commander-extension/background.js
 const WS_URL = "ws://localhost:8080/extension"; // Backend WebSocket URL + identifier path
 let socket = null;
-let reconnectInterval = 5000; // 5 seconds
+let reconnectInterval = 5000;
 let isRegistered = false;
 
 function connect() {
@@ -211,13 +210,11 @@ function domClick(selector) {
       if (textMatch) {
         textMatch.click();
       } else {
-        console.error(
-          `Voice Commander: Element not found for selector "${selector}"`
-        );
+        console.error(`Alris: Element not found for selector "${selector}"`);
       }
     }
   } catch (e) {
-    console.error(`Voice Commander: Error clicking selector "${selector}":`, e);
+    console.error(`Alris: Error clicking selector "${selector}":`, e);
   }
 }
 
@@ -247,14 +244,11 @@ function domType(selector, text) {
       element.blur();
     } else {
       console.error(
-        `Voice Commander: Element not found or not typable for selector "${selector}"`
+        `Alris: Element not found or not typable for selector "${selector}"`
       );
     }
   } catch (e) {
-    console.error(
-      `Voice Commander: Error typing in selector "${selector}":`,
-      e
-    );
+    console.error(`Alris: Error typing in selector "${selector}":`, e);
   }
 }
 // --- End DOM Functions ---

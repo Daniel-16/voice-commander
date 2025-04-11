@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Voice Commander",
-  description: "Voice Commander is a powerful tool that allows you to control your browser using text or voice commands. It is designed to be fast, efficient, and easy to use.",
+  title: "Alris",
+  description:
+    "Alris is a powerful tool that allows you to control your browser using text or voice commands. It is designed to be fast, efficient, and easy to use.",
 };
 
 export default function RootLayout({

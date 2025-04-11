@@ -2,12 +2,44 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  start(): void;
+  stop(): void;
+  onresult: (event: SpeechRecognitionEvent) => void;
+  onerror: (event: SpeechRecognitionErrorEvent) => void;
+  onend: () => void;
+}
+
+interface SpeechRecognitionEvent {
+  results: {
+    [index: number]: {
+      [index: number]: {
+        transcript: string;
+      };
+    };
+  };
+}
+
+interface SpeechRecognitionErrorEvent {
+  error: string;
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition: new () => SpeechRecognition;
+    webkitSpeechRecognition: new () => SpeechRecognition;
+  }
+}
+
 const WS_URL = "ws://localhost:8080";
 
 export default function HomePage() {
-  const [status, setStatus] = useState<string>("Initializing...");
-  const [isRecording, setIsRecording] = useState<boolean>(false);
-  const [inputText, setInputText] = useState<string>("");
+  const [status, setStatus] = useState("Initializing...");
+  const [isRecording, setIsRecording] = useState(false);
+  const [inputText, setInputText] = useState("");
   const [messages, setMessages] = useState<
     Array<{ type: string; content: string; timestamp: string }>
   >([]);
@@ -16,6 +48,7 @@ export default function HomePage() {
   const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttempts = useRef<number>(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const speechRecognition = useRef<SpeechRecognition | null>(null);
   const MAX_RECONNECT_DELAY = 30000;
 
   const scrollToBottom = () => {
@@ -29,6 +62,74 @@ export default function HomePage() {
   const addMessage = (type: string, content: string) => {
     const timestamp = new Date().toLocaleTimeString();
     setMessages((prev) => [...prev, { type, content, timestamp }]);
+  };
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const SpeechRecognition =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        speechRecognition.current = new SpeechRecognition();
+        speechRecognition.current.continuous = false;
+        speechRecognition.current.interimResults = false;
+        speechRecognition.current.lang = "en-US";
+
+        speechRecognition.current.onresult = (event) => {
+          const transcript = event.results[0][0].transcript;
+          if (socketRef.current?.readyState === WebSocket.OPEN) {
+            socketRef.current.send(
+              JSON.stringify({
+                type: "voice_command",
+                payload: transcript,
+              })
+            );
+            setStatus("Processing voice command...");
+            addMessage("command", transcript);
+          }
+        };
+
+        speechRecognition.current.onerror = (event) => {
+          console.error("Speech recognition error:", event.error);
+          setStatus("Error: " + event.error);
+          addMessage("error", "Speech recognition error: " + event.error);
+          setIsRecording(false);
+          setTimeout(() => setStatus("Ready"), 3000);
+        };
+
+        speechRecognition.current.onend = () => {
+          setIsRecording(false);
+        };
+      } else {
+        setStatus("Error: Speech recognition not supported");
+        addMessage("error", "Speech recognition not supported in this browser");
+      }
+    }
+  }, []);
+
+  const startRecording = async () => {
+    try {
+      if (speechRecognition.current) {
+        await speechRecognition.current.start();
+        setIsRecording(true);
+        setStatus("Recording...");
+        addMessage("system", "Started recording");
+      } else {
+        throw new Error("Speech recognition not initialized");
+      }
+    } catch (err) {
+      console.error("Error starting speech recognition:", err);
+      setStatus("Error: Could not start speech recognition");
+      addMessage("error", "Could not start speech recognition");
+      setIsRecording(false);
+      setTimeout(() => setStatus("Ready"), 3000);
+    }
+  };
+
+  const stopRecording = () => {
+    if (speechRecognition.current) {
+      speechRecognition.current.stop();
+      setIsRecording(false);
+    }
   };
 
   const connectWebSocket = useCallback(() => {
@@ -209,21 +310,9 @@ export default function HomePage() {
         {/* Header */}
         <div className="flex items-center justify-between border-b pb-4">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
-            Voice Commander
+            Alris
           </h1>
           <div className="flex items-center gap-4">
-            {/* <div className="flex items-center gap-2">
-              <div
-                className={`h-3 w-3 rounded-full ${
-                  extensionStatus === "Connected"
-                    ? "bg-green-500"
-                    : "bg-red-500"
-                }`}
-              />
-              <span className="text-sm font-medium text-gray-600">
-                Extension: {extensionStatus}
-              </span>
-            </div> */}
             <div className="flex items-center gap-2">
               <div
                 className={`h-3 w-3 rounded-full ${
@@ -271,7 +360,7 @@ export default function HomePage() {
             </div>
           ))}
           <div ref={messagesEndRef} />
-        </div>        
+        </div>
         <form
           onSubmit={(e) => e.preventDefault()}
           className="flex flex-col gap-4"
@@ -292,6 +381,43 @@ export default function HomePage() {
               }
             />
             <button
+              type="button"
+              onClick={isRecording ? stopRecording : startRecording}
+              disabled={
+                status !== "Ready" &&
+                !isRecording &&
+                status !== "Recording..." &&
+                status !== "Unsupported command" &&
+                !status.startsWith("Error:") &&
+                status !== "Executed"
+              }
+              className={`px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 ${
+                isRecording
+                  ? "bg-red-600 hover:bg-red-700 focus:ring-red-500"
+                  : "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"
+              }`}
+              title={isRecording ? "Stop Recording" : "Start Recording"}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="w-6 h-6 text-white"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d={
+                    isRecording
+                      ? "M5.25 7.5A2.25 2.25 0 017.5 5.25h9a2.25 2.25 0 012.25 2.25v9a2.25 2.25 0 01-2.25 2.25h-9a2.25 2.25 0 01-2.25-2.25v-9z"
+                      : "M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"
+                  }
+                />
+              </svg>
+            </button>
+            <button
               onClick={sendCommandText}
               disabled={
                 status !== "Ready" &&
@@ -306,7 +432,9 @@ export default function HomePage() {
             </button>
           </div>
           <p className="text-xs text-gray-500 text-center">
-            Type a command and press Enter or click Send
+            {isRecording
+              ? "Recording... Click the microphone button to stop"
+              : "Type a command and press Enter, or click the microphone to record"}
           </p>
         </form>
       </div>

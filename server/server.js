@@ -97,117 +97,141 @@ wss.on("connection", (ws, req) => {
   }
 
   ws.on("message", async (message) => {
-    console.log("Received message:", message.toString());
-    let data;
     try {
-      data = JSON.parse(message.toString());
+      const data = JSON.parse(message);
 
-      if (data.type === "register" && data.payload?.client === "extension") {
-        console.log("Extension registered:", data.payload);
-        registeredExtensions.add(ws);
-        safeSend(
-          ws,
-          JSON.stringify({
-            type: "message",
-            payload: "Registration successful",
-          })
-        );
-        return;
-      }
-
-      if (data.type === "ping") {
-        ws.isAlive = true;
-        safeSend(ws, JSON.stringify({ type: "pong" }));
-        return;
-      }
-
-      if (data.type === "voice_command" && data.payload) {
-        const userText = data.payload;
-        console.log(`Processing user command: ${userText}`);
-
-        broadcastToWebApps(
-          JSON.stringify({ type: "message", payload: "Processing" })
-        );
-
+      if (data.type === "voice_command") {
+        const response = await processVoiceCommand(data);
+        safeSend(ws, JSON.stringify(response));
+      } else {
+        console.log("Received message:", message.toString());
+        let data;
         try {
-          const commandJson = await getCommandFromLLM(userText);
-          console.log(`LLM JSON: ${JSON.stringify(commandJson)}`);
+          data = JSON.parse(message.toString());
 
-          if (commandJson && Object.keys(commandJson).length > 0) {
-            console.log("Broadcasting command to extensions:", commandJson);
+          if (
+            data.type === "register" &&
+            data.payload?.client === "extension"
+          ) {
+            console.log("Extension registered:", data.payload);
+            registeredExtensions.add(ws);
+            safeSend(
+              ws,
+              JSON.stringify({
+                type: "message",
+                payload: "Registration successful",
+              })
+            );
+            return;
+          }
 
-            if (registeredExtensions.size === 0) {
+          if (data.type === "ping") {
+            ws.isAlive = true;
+            safeSend(ws, JSON.stringify({ type: "pong" }));
+            return;
+          }
+
+          if (data.type === "voice_command" && data.payload) {
+            const userText = data.payload;
+            console.log(`Processing user command: ${userText}`);
+
+            broadcastToWebApps(
+              JSON.stringify({ type: "message", payload: "Processing" })
+            );
+
+            try {
+              const commandJson = await getCommandFromLLM(userText);
+              console.log(`LLM JSON: ${JSON.stringify(commandJson)}`);
+
+              if (commandJson && Object.keys(commandJson).length > 0) {
+                console.log("Broadcasting command to extensions:", commandJson);
+
+                if (registeredExtensions.size === 0) {
+                  broadcastToWebApps(
+                    JSON.stringify({
+                      type: "error",
+                      payload:
+                        "No browser extension connected. Please install and enable the extension.",
+                    })
+                  );
+                  return;
+                }
+
+                broadcastToRegisteredExtensions(
+                  JSON.stringify({
+                    type: "command",
+                    payload: commandJson,
+                  })
+                );
+
+                broadcastToWebApps(
+                  JSON.stringify({
+                    type: "message",
+                    payload: "Command sent to extension",
+                  })
+                );
+              } else {
+                console.log("Unsupported or ambiguous command");
+                broadcastToWebApps(
+                  JSON.stringify({
+                    type: "error",
+                    payload:
+                      "Unsupported or ambiguous command. Please try rephrasing.",
+                  })
+                );
+              }
+            } catch (error) {
+              console.error("Error processing command:", error);
               broadcastToWebApps(
                 JSON.stringify({
                   type: "error",
-                  payload:
-                    "No browser extension connected. Please install and enable the extension.",
+                  payload: "Error processing command: " + error.message,
                 })
               );
-              return;
             }
-
-            broadcastToRegisteredExtensions(
-              JSON.stringify({
-                type: "command",
-                payload: commandJson,
-              })
-            );
-
+          } else if (data.type === "execution_confirmation") {
+            console.log("Execution confirmation received:", data.payload);
             broadcastToWebApps(
               JSON.stringify({
                 type: "message",
-                payload: "Command sent to extension",
+                payload: "Execution confirmed",
               })
             );
-          } else {
-            console.log("Unsupported or ambiguous command");
+            setTimeout(() => {
+              broadcastToWebApps(
+                JSON.stringify({ type: "message", payload: "Ready" })
+              );
+            }, 1500);
+          } else if (data.type === "execution_error") {
+            console.error("Execution error from extension:", data.payload);
             broadcastToWebApps(
               JSON.stringify({
                 type: "error",
-                payload:
-                  "Unsupported or ambiguous command. Please try rephrasing.",
+                payload: `Extension error: ${data.payload.error}`,
               })
             );
+            setTimeout(() => {
+              broadcastToWebApps(
+                JSON.stringify({ type: "message", payload: "Ready" })
+              );
+            }, 2000);
           }
         } catch (error) {
-          console.error("Error processing command:", error);
-          broadcastToWebApps(
-            JSON.stringify({
-              type: "error",
-              payload: "Error processing command: " + error.message,
-            })
+          console.error("Error parsing message:", error);
+          safeSend(
+            ws,
+            JSON.stringify({ type: "error", payload: "Invalid message format" })
           );
         }
-      } else if (data.type === "execution_confirmation") {
-        console.log("Execution confirmation received:", data.payload);
-        broadcastToWebApps(
-          JSON.stringify({ type: "message", payload: "Execution confirmed" })
-        );
-        setTimeout(() => {
-          broadcastToWebApps(
-            JSON.stringify({ type: "message", payload: "Ready" })
-          );
-        }, 1500);
-      } else if (data.type === "execution_error") {
-        console.error("Execution error from extension:", data.payload);
-        broadcastToWebApps(
-          JSON.stringify({
-            type: "error",
-            payload: `Extension error: ${data.payload.error}`,
-          })
-        );
-        setTimeout(() => {
-          broadcastToWebApps(
-            JSON.stringify({ type: "message", payload: "Ready" })
-          );
-        }, 2000);
       }
     } catch (error) {
-      console.error("Error parsing message:", error);
+      console.error("Error processing message:", error);
       safeSend(
         ws,
-        JSON.stringify({ type: "error", payload: "Invalid message format" })
+        JSON.stringify({
+          type: "error",
+          payload: "Failed to process command",
+        })
       );
     }
   });
@@ -252,6 +276,54 @@ async function getCommandFromLLM(userInput) {
     console.error("Error parsing JSON from LLM output:", error);
     throw new Error("LLM API call failed");
   }
+}
+
+async function processVoiceCommand(data) {
+  if (typeof data.payload === "string") {
+    // Direct text processing - no more audio handling needed
+    console.log(`Processing voice command text: ${data.payload}`);
+    try {
+      const commandJson = await getCommandFromLLM(data.payload);
+
+      if (commandJson && Object.keys(commandJson).length > 0) {
+        if (registeredExtensions.size === 0) {
+          return {
+            type: "error",
+            payload:
+              "No browser extension connected. Please install and enable the extension.",
+          };
+        }
+
+        broadcastToRegisteredExtensions(
+          JSON.stringify({
+            type: "command",
+            payload: commandJson,
+          })
+        );
+
+        return {
+          type: "message",
+          payload: `Recognized: "${data.payload}". Executing command...`,
+        };
+      } else {
+        return {
+          type: "error",
+          payload: "Unsupported or ambiguous command. Please try again.",
+        };
+      }
+    } catch (error) {
+      console.error("Error processing command:", error);
+      return {
+        type: "error",
+        payload: "Failed to process command",
+      };
+    }
+  }
+
+  return {
+    type: "error",
+    payload: "Invalid command format",
+  };
 }
 
 function safeSend(client, message) {

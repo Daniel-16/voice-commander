@@ -1,4 +1,4 @@
-# Voice Commander Chrome Extension
+# Alris Chrome Extension
 
 Chrome extension that executes browser commands received via WebSocket connection.
 
@@ -26,6 +26,7 @@ Chrome extension that executes browser commands received via WebSocket connectio
 ## Permissions
 
 The extension requires the following permissions:
+
 - `tabs` - For tab manipulation
 - `scripting` - For executing commands
 - `activeTab` - For accessing the current tab
@@ -45,6 +46,7 @@ The extension connects to `ws://localhost:8080` by default and listens for comma
 ## Command Types
 
 The extension can handle various commands including:
+
 - Opening URLs
 - Switching tabs
 - Browser navigation
