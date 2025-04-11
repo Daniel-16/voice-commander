@@ -18,3 +18,6 @@ build/
 .vscode/
 *.swp
 .DS_Store
+
+# Config files
+config/prompt.js

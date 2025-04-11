@@ -1,6 +1,7 @@
 import "dotenv/config.js";
 import { WebSocketServer, WebSocket } from "ws";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { browserControlPrompt } from "./config/prompt";
 
 const PORT = process.env.PORT || 8080;
 const API_KEY = process.env.GOOGLE_API_KEY;
@@ -19,13 +20,12 @@ console.log(`WebSocket server started on port ${PORT}`);
 
 const clients = new Set();
 const extensions = new Set();
-const registeredExtensions = new Set(); // Track properly registered extensions
+const registeredExtensions = new Set();
 
 function heartbeat() {
   this.isAlive = true;
 }
 
-// More frequent heartbeat checks (every 15 seconds)
 const interval = setInterval(() => {
   wss.clients.forEach((ws) => {
     if (ws.isAlive === false) {
@@ -51,21 +51,49 @@ wss.on("error", (error) => {
 
 wss.on("connection", (ws, req) => {
   console.log("Client connected from:", req.socket.remoteAddress);
-
-  // Set up connection monitoring
   ws.isAlive = true;
   ws.on("pong", heartbeat);
 
-  // Add to appropriate client set
   clients.add(ws);
-  const clientType = req.url === "/extensions" ? "extension" : "webapp";
+  const clientType = req.url === "/extension" ? "extension" : "webapp";
 
   if (clientType === "extension") {
     extensions.add(ws);
-    console.log("Potential extension client connected - awaiting registration");
+    console.log("Browser extension connected - awaiting registration");
+    safeSend(
+      ws,
+      JSON.stringify({
+        type: "message",
+        payload: "Extension connected - awaiting registration",
+      })
+    );
   } else {
-    console.log("Webapp client connected");
-    safeSend(ws, JSON.stringify({ type: "message", payload: "Ready" }));
+    console.log("Web interface connected");
+    safeSend(
+      ws,
+      JSON.stringify({ type: "message", payload: "Web interface connected" })
+    );
+    if (registeredExtensions.size > 0) {
+      safeSend(
+        ws,
+        JSON.stringify({
+          type: "message",
+          payload: "Browser extension is active",
+        })
+      );
+    } else {
+      safeSend(
+        ws,
+        JSON.stringify({
+          type: "message",
+          payload:
+            "No browser extension detected. Please install and enable the extension.",
+        })
+      );
+    }
+    setTimeout(() => {
+      safeSend(ws, JSON.stringify({ type: "message", payload: "Ready" }));
+    }, 1500);
   }
 
   ws.on("message", async (message) => {
@@ -74,7 +102,6 @@ wss.on("connection", (ws, req) => {
     try {
       data = JSON.parse(message.toString());
 
-      // Handle extension registration
       if (data.type === "register" && data.payload?.client === "extension") {
         console.log("Extension registered:", data.payload);
         registeredExtensions.add(ws);
@@ -88,9 +115,8 @@ wss.on("connection", (ws, req) => {
         return;
       }
 
-      // Handle ping messages from extension
       if (data.type === "ping") {
-        ws.isAlive = true; // Manual heartbeat
+        ws.isAlive = true;
         safeSend(ws, JSON.stringify({ type: "pong" }));
         return;
       }
@@ -110,7 +136,6 @@ wss.on("connection", (ws, req) => {
           if (commandJson && Object.keys(commandJson).length > 0) {
             console.log("Broadcasting command to extensions:", commandJson);
 
-            // Check for registered extensions
             if (registeredExtensions.size === 0) {
               broadcastToWebApps(
                 JSON.stringify({
@@ -204,71 +229,10 @@ wss.on("connection", (ws, req) => {
 
 async function getCommandFromLLM(userInput) {
   const prompt = `
-        Convert voice input to JSON for browser control. Supported actions:
-
-        open_url: URL (e.g., "youtube.com")
-
-        click: CSS selector (e.g., ".btn")
-        scroll: Pixels (e.g., 300 for down, -300 for up)
-        type: { "selector": "#field", "text": "value" }
-        navigate: "back", "forward", "refresh"
-        close_tab: No value
-
-        Rules:
-
-        Output strictly JSON: { "action": "ACTION_NAME", "value": VALUE } or {} if unsupported.
-
-        Infer HTTPS URLs and common domains (e.g., "Google" -> "google.com", "YouTube" -> "youtube.com"). For "open google.com", use "google.com".
-
-        For scrolling, "down" usually means 300 pixels, "up" means -300. "scroll to top" means 0, "scroll to bottom" means a very large positive number like 10000. Infer pixel value if not specified.
-
-        For clicking, try to infer a CSS selector like a class, ID, or attribute. E.g. "click login" might be ".login", "#login-button", or "[aria-label='login']". Prioritize simple selectors. Use the text itself if no other cue exists, like "button containing 'Submit'". For simple link text like "click products", try "a:contains('products')" or similar. Be specific. If target is ambiguous (e.g. "click button"), output {}.
-
-        For typing, identify the text and the target field selector. E.g., "type hello world in the search box" -> { "action": "type", "value": { "selector": "#search", "text": "hello world" } }. Infer common selectors like '#search' or 'input[name="q"]' for search. If target field is unclear, output {}.
-
-        If the command is ambiguous, unsupported, conversational, or doesn't match any action, output {}.
-
-        Ensure the output is only the JSON object or {}.
-
-        Examples:
-
-        "open YouTube" -> { "action": "open_url", "value": "youtube.com" }
-
-        "Show me dog videos" -> { "action": "open_url", "value": "youtube.com/results?search_query=dog+videos" }
-
-        "open tech crunch dot com" -> { "action": "open_url", "value": "techcrunch.com" }
-
-        "click the login button" -> { "action": "click", "value": ".login" } (or #login-button, etc.)
-
-        "click sign up" -> { "action": "click", "value": "[aria-label='sign up']" } (example)
-
-        "scroll down a bit" -> { "action": "scroll", "value": 300 }
-
-        "scroll up" -> { "action": "scroll", "value": -300 }
-
-        "scroll to the top" -> { "action": "scroll", "value": 0 }
-
-        "type hello world in search" -> { "action": "type", "value": { "selector": "#search", "text": "hello world" } }
-
-        "type my username in the user field" -> { "action": "type", "value": { "selector": "#username", "text": "my username" } }
-
-        "go back" -> { "action": "navigate", "value": "back" }
-
-        "refresh the page" -> { "action": "navigate", "value": "refresh" }
-
-        "go forward" -> { "action": "navigate", "value": "forward" }
-
-        "close this tab" -> { "action": "close_tab", "value": null }
-
-        "what is the weather" -> {}
-
-        "fly to the moon" -> {}
-
-        "make me a sandwich" -> {}
-
-        Input: ${userInput}
-        Output:
-`;
+    ${browserControlPrompt}
+    Input: ${userInput}
+    Output:
+  `;
   try {
     const result = await model.generateContent(prompt);
     const response = await result.response;

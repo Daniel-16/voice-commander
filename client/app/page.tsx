@@ -10,11 +10,12 @@ export default function HomePage() {
   const [inputText, setInputText] = useState<string>("");
   const [messages, setMessages] = useState<
     Array<{ type: string; content: string; timestamp: string }>
-  >([]); // Added messages state
+  >([]);
+  const [extensionStatus, setExtensionStatus] = useState<string>("Unknown");
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttempts = useRef<number>(0);
-  const messagesEndRef = useRef<HTMLDivElement>(null); // Added ref for auto-scroll
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const MAX_RECONNECT_DELAY = 30000;
 
   const scrollToBottom = () => {
@@ -56,8 +57,8 @@ export default function HomePage() {
 
       socketRef.current.onopen = () => {
         console.log("WebSocket connected");
-        setStatus("Ready");
-        addMessage("system", "Connected to server");
+        setStatus("Initializing...");
+        addMessage("system", "Web interface connected");
         reconnectAttempts.current = 0;
       };
 
@@ -68,21 +69,24 @@ export default function HomePage() {
           if (data.type === "status") {
             setStatus(data.payload || "Unknown status");
             addMessage("system", data.payload);
-            // Reset status to Ready after a delay if it's a non-error status
             if (!data.payload.toLowerCase().includes("error")) {
               setTimeout(() => setStatus("Ready"), 3000);
             }
           } else if (data.type === "error") {
             setStatus(`Error: ${data.payload}`);
             addMessage("error", data.payload);
-            // Reset status to Ready after showing error
             setTimeout(() => setStatus("Ready"), 3000);
           } else if (data.type === "message") {
             if (data.payload === "Processing") {
               setStatus("Processing...");
+            } else if (data.payload === "Browser extension is active") {
+              setExtensionStatus("Connected");
+              addMessage("system", "Browser extension detected and active");
+            } else if (data.payload.includes("No browser extension")) {
+              setExtensionStatus("Not Connected");
+              addMessage("system", data.payload);
             } else {
               addMessage("response", data.payload);
-              // If it's a completion message, reset status
               if (
                 data.payload === "Execution confirmed" ||
                 data.payload === "Ready"
@@ -95,7 +99,6 @@ export default function HomePage() {
           console.error("Failed to parse message:", error);
           setStatus("Error processing server message");
           addMessage("error", "Failed to process server message");
-          // Reset status to Ready after error
           setTimeout(() => setStatus("Ready"), 3000);
         }
       };
@@ -168,15 +171,22 @@ export default function HomePage() {
       addMessage("command", inputText);
       setInputText("");
 
-      // Set a timeout to reset UI state if no response is received
-      const timeoutId = setTimeout(() => {
-        setStatus("No response from server");
-        addMessage("error", "Command timed out - no response received");
-        setTimeout(() => setStatus("Ready"), 1500);
-      }, 10000); // 10 second timeout
+      let timeoutId = setTimeout(() => {
+        if (status === "Processing...") {
+          setStatus("Still processing...");
+          timeoutId = setTimeout(() => {
+            if (status.includes("processing")) {
+              setStatus("No response from server");
+              addMessage("error", "Command timed out - no response received");
+              setTimeout(() => setStatus("Ready"), 1500);
+            }
+          }, 10000);
+        }
+      }, 10000);
 
-      // Clear the timeout when component unmounts or when a new command is sent
-      return () => clearTimeout(timeoutId);
+      return () => {
+        if (timeoutId) clearTimeout(timeoutId);
+      };
     } else {
       setStatus("Not connected. Cannot send.");
       addMessage("error", "Not connected to server");
@@ -207,19 +217,35 @@ export default function HomePage() {
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
             Voice Commander
           </h1>
-          <div className="flex items-center gap-2">
-            <div
-              className={`h-3 w-3 rounded-full ${
-                status === "Ready"
-                  ? "bg-green-500"
-                  : status.includes("Error")
-                  ? "bg-red-500"
-                  : status === "Connecting..."
-                  ? "bg-yellow-500 animate-pulse"
-                  : "bg-gray-400"
-              }`}
-            />
-            <span className="text-sm font-medium text-gray-600">{status}</span>
+          <div className="flex items-center gap-4">
+            {/* <div className="flex items-center gap-2">
+              <div
+                className={`h-3 w-3 rounded-full ${
+                  extensionStatus === "Connected"
+                    ? "bg-green-500"
+                    : "bg-red-500"
+                }`}
+              />
+              <span className="text-sm font-medium text-gray-600">
+                Extension: {extensionStatus}
+              </span>
+            </div> */}
+            <div className="flex items-center gap-2">
+              <div
+                className={`h-3 w-3 rounded-full ${
+                  status === "Ready"
+                    ? "bg-green-500"
+                    : status.includes("Error")
+                    ? "bg-red-500"
+                    : status === "Connecting..."
+                    ? "bg-yellow-500 animate-pulse"
+                    : "bg-gray-400"
+                }`}
+              />
+              <span className="text-sm font-medium text-gray-600">
+                {status}
+              </span>
+            </div>
           </div>
         </div>
 

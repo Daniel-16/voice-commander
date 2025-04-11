@@ -1,14 +1,17 @@
-const WS_URL = "ws://localhost:8080/extension";
+// voice-commander-extension/background.js
+const WS_URL = "ws://localhost:8080/extension"; // Backend WebSocket URL + identifier path
 let socket = null;
-let reconnectInterval = 5000;
+let reconnectInterval = 5000; // 5 seconds
+let isRegistered = false;
 
 function connect() {
-  console.log("Attempting to connect to WebSocket server...", WS_URL);
+  console.log("Attempting to connect to WebSocket:", WS_URL);
   socket = new WebSocket(WS_URL);
 
   socket.onopen = () => {
-    console.log("Connected to WebSocket server");
-    updatePopupStatus("Connected");
+    console.log("WebSocket connected");
+    // Send registration message
+    registerExtension();
   };
 
   socket.onmessage = async (event) => {
@@ -17,47 +20,72 @@ function connect() {
     try {
       data = JSON.parse(event.data);
     } catch (error) {
-      console.error("Failed to parse message", error);
+      console.error("Failed to parse message:", error);
       return;
     }
 
-    if (data.type === "command" && data.payload) {
+    if (data.type === "message" && data.payload === "Registration successful") {
+      isRegistered = true;
+      updatePopupStatus("Connected and Registered");
+      console.log("Extension successfully registered with server");
+    } else if (data.type === "command" && data.payload) {
+      if (!isRegistered) {
+        console.warn(
+          "Received command but not registered, attempting registration"
+        );
+        registerExtension();
+        return;
+      }
       await executeCommand(data.payload);
     }
   };
 
   socket.onclose = (event) => {
-    console.log("Websocket disconnected. Reason: ", event.code, event.reason);
+    console.log("WebSocket disconnected. Reason:", event.code, event.reason);
     updatePopupStatus(`Disconnected (Code: ${event.code})`);
     socket = null;
+    isRegistered = false;
+    // Attempt to reconnect
     setTimeout(connect, reconnectInterval);
   };
 
   socket.onerror = (error) => {
-    console.error("Websocket error: ", error);
-    updatePopupStatus(error);
-    socket = null;
+    console.error("WebSocket error:", error);
+    updatePopupStatus("Error");
+    isRegistered = false;
+    // The onclose event will likely fire after this, triggering reconnect
+    socket = null; // Ensure socket is nullified
   };
+}
+
+function registerExtension() {
+  safeSend({
+    type: "register",
+    payload: {
+      client: "extension",
+      version: chrome.runtime.getManifest().version,
+    },
+  });
 }
 
 function safeSend(data) {
   if (socket && socket.readyState === WebSocket.OPEN) {
     try {
       socket.send(JSON.stringify(data));
-      console.log("Sent message: ", data);
+      console.log("Sent message:", data);
       return true;
     } catch (error) {
-      console.error("Error sending message", error);
+      console.error("Failed to send message:", error);
       return false;
     }
   } else {
-    console.warn("Cannot send message, WebSocket not open");
+    console.warn("Cannot send message, WebSocket not open.");
     return false;
   }
 }
 
 async function executeCommand(command) {
-  console.log("Executing command", command);
+  console.log("Executing command:", command);
   let result = { success: false, error: null };
   try {
     const [currentTab] = await chrome.tabs.query({
@@ -65,7 +93,7 @@ async function executeCommand(command) {
       currentWindow: true,
     });
     if (!currentTab) {
-      throw new Error("No active tabs found.");
+      throw new Error("No active tab found.");
     }
     const tabId = currentTab.id;
 
@@ -78,22 +106,25 @@ async function executeCommand(command) {
         await chrome.tabs.create({ url: url });
         result.success = true;
         break;
+
       case "click":
         await chrome.scripting.executeScript({
-          target: { tabId },
+          target: { tabId: tabId },
           func: domClick,
-          args: [command.value],
+          args: [command.value], // CSS Selector
         });
-        result.success = true;
+        result.success = true; // Assume success for now
         break;
+
       case "scroll":
         await chrome.scripting.executeScript({
-          target: { tabId },
+          target: { tabId: tabId },
           func: domScroll,
-          args: [command.value],
+          args: [command.value], // Pixels (positive/negative/0/large)
         });
-        result.success = true;
+        result.success = true; // Assume success
         break;
+
       case "type":
         if (
           typeof command.value === "object" &&
@@ -101,15 +132,16 @@ async function executeCommand(command) {
           command.value.text
         ) {
           await chrome.scripting.executeScript({
-            target: { tabId },
+            target: { tabId: tabId },
             func: domType,
             args: [command.value.selector, command.value.text],
           });
-          result.success = true;
+          result.success = true; // Assume success
         } else {
-          throw new Error("Invalid command value for 'type'");
+          throw new Error("Invalid 'type' command value format.");
         }
         break;
+
       case "navigate":
         switch (command.value) {
           case "back":
@@ -125,43 +157,40 @@ async function executeCommand(command) {
             result.success = true;
             break;
           default:
-            throw new Error("Invalid command value for 'navigate'");
+            throw new Error(`Unsupported navigation action: ${command.value}`);
         }
         break;
+
       case "close_tab":
         await chrome.tabs.remove(tabId);
         result.success = true;
         break;
+
       default:
-        throw new Error("Unknown command action", command.action);
+        throw new Error(`Unsupported command action: ${command.action}`);
     }
-    safeSend({
-      type: "execution_confirmation",
-      payload: {
-        command,
-      },
-    });
+    // Send confirmation back to backend
+    safeSend({ type: "execution_confirmation", payload: command });
   } catch (error) {
-    console.error("Error executing command", error);
+    console.error("Error executing command:", command, error);
     result.error = error.message;
+    // Send error back to backend
     safeSend({
       type: "execution_error",
-      payload: {
-        command,
-        error: error.message,
-      },
+      payload: { command: command, error: error.message },
     });
-    console.log("Error result", result);
   }
+  // Optional: update popup or show notification based on result
+  console.log("Execution result:", result);
 }
 
+// --- DOM Interaction Functions (to be injected) ---
 function domClick(selector) {
   try {
     const element = document.querySelector(selector);
     if (element) {
       element.click();
     } else {
-      // Try finding by text content as a fallback for simple cases
       const elements = Array.from(
         document.querySelectorAll(
           'button, a, input[type="button"], input[type="submit"]'
@@ -185,8 +214,6 @@ function domClick(selector) {
         console.error(
           `Voice Commander: Element not found for selector "${selector}"`
         );
-        // Cannot easily send error back from injected script without complex messaging
-        // throw new Error(`Element not found: ${selector}`); // This error won't reach background.js easily
       }
     }
   } catch (e) {
@@ -196,10 +223,8 @@ function domClick(selector) {
 
 function domScroll(pixels) {
   if (pixels === 0) {
-    // Scroll to top
     window.scrollTo({ top: 0, behavior: "smooth" });
   } else if (pixels > 5000) {
-    // Scroll to bottom heuristic
     window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
   } else {
     window.scrollBy({ top: pixels, behavior: "smooth" });
@@ -215,12 +240,8 @@ function domType(selector, text) {
         element.tagName === "TEXTAREA" ||
         element.isContentEditable)
     ) {
-      // Focus, clear existing (optional), type, and blur
       element.focus();
-      // element.value = ''; // Optional: clear before typing
-      // Simulate typing character by character might trigger more events if needed
       element.value = text;
-      // Dispatch input/change events to potentially trigger framework updates
       element.dispatchEvent(new Event("input", { bubbles: true }));
       element.dispatchEvent(new Event("change", { bubbles: true }));
       element.blur();
@@ -238,12 +259,10 @@ function domType(selector, text) {
 }
 // --- End DOM Functions ---
 
-// Function to update popup status (if popup is open)
 function updatePopupStatus(statusText) {
   chrome.runtime
     .sendMessage({ type: "statusUpdate", status: statusText })
     .catch((err) => {
-      // Ignore error if popup is not open / listening
       if (
         err.message !==
         "Could not establish connection. Receiving end does not exist."
@@ -253,17 +272,7 @@ function updatePopupStatus(statusText) {
     });
 }
 
-// Initial connection attempt
 connect();
-
-// Optional: Keep service worker alive mechanism (use alarms if needed for longer tasks)
-chrome.alarms.create('keepAlive', { periodInMinutes: 4.8 });
-chrome.alarms.onAlarm.addListener(alarm => {
-  if (alarm.name === 'keepAlive') {
-    console.log('Keep alive alarm fired');
-    // You might check connection status here or perform a no-op
-  }
-});
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "getStatus") {
