@@ -201,7 +201,7 @@ export default function HomePage() {
         }
       }, 1000);
     }
-  };  
+  };
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4 md:p-8 bg-gradient-to-br from-gray-50 to-gray-100">
@@ -271,10 +271,11 @@ export default function HomePage() {
             </div>
           ))}
           <div ref={messagesEndRef} />
-        </div>
-
-        {/* Input Section */}
-        <div className="flex flex-col gap-4">
+        </div>        
+        <form
+          onSubmit={(e) => e.preventDefault()}
+          className="flex flex-col gap-4"
+        >
           <div className="flex gap-2">
             <input
               type="text"
@@ -307,7 +308,7 @@ export default function HomePage() {
           <p className="text-xs text-gray-500 text-center">
             Type a command and press Enter or click Send
           </p>
-        </div>
+        </form>
       </div>
     </main>
   );
