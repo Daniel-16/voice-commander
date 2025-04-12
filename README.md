@@ -2,6 +2,10 @@
 
 A powerful command system that allows users to control their browser through voice or text commands. The project consists of three main components:
 
+**Author:** Daniel Toba  
+**Copyright:** © 2024 Daniel Toba  
+**License:** [MIT](LICENSE)
+
 ## Project Structure
 
 - `client/`: Next.js web application for the user interface

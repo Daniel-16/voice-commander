@@ -8,7 +8,7 @@
     "dev": "nodemon server.js"
   },
   "keywords": [],
-  "author": "",
+  "author": "Daniel Toba",
   "license": "MIT",
   "type": "module",
   "dependencies": {
