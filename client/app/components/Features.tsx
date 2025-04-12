@@ -14,8 +14,15 @@ const features = [
         className="h-6 w-6"
         fill="none"
         viewBox="0 0 24 24"
-        stroke="currentColor"
+        stroke="url(#gradient)"
       >
+        <defs>
+          <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#2563eb" />
+            <stop offset="50%" stopColor="#a855f7" />
+            <stop offset="100%" stopColor="#2563eb" />
+          </linearGradient>
+        </defs>
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -35,8 +42,15 @@ const features = [
         className="h-6 w-6"
         fill="none"
         viewBox="0 0 24 24"
-        stroke="currentColor"
+        stroke="url(#gradient)"
       >
+        <defs>
+          <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#2563eb" />
+            <stop offset="50%" stopColor="#a855f7" />
+            <stop offset="100%" stopColor="#2563eb" />
+          </linearGradient>
+        </defs>
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -56,8 +70,15 @@ const features = [
         className="h-6 w-6"
         fill="none"
         viewBox="0 0 24 24"
-        stroke="currentColor"
+        stroke="url(#gradient)"
       >
+        <defs>
+          <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#2563eb" />
+            <stop offset="50%" stopColor="#a855f7" />
+            <stop offset="100%" stopColor="#2563eb" />
+          </linearGradient>
+        </defs>
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
