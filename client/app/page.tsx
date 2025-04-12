@@ -55,7 +55,9 @@ export default function LandingPage() {
               <ul className="mt-4 space-y-4">
                 <li>
                   <a
-                    href="#"
+                    href="https://github.com/Daniel-16/alris"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="text-base text-gray-500 hover:text-gray-900"
                   >
                     Documentation

@@ -66,11 +66,21 @@ const Hero = () => {
           className="mt-16 relative"
         >
           <div className="relative mx-auto max-w-4xl rounded-lg shadow-lg overflow-hidden">
-            <div className="relative aspect-video bg-gray-800 rounded-lg">
-              {/* Replace with actual demo video or animation */}
-              <div className="absolute inset-0 flex items-center justify-center text-white text-xl">
-                Demo Video Placeholder
-              </div>
+            <div className="relative aspect-video bg-gray-900 rounded-lg">
+              <video
+                className="w-full h-full object-cover rounded-lg"
+                autoPlay
+                loop
+                muted
+                playsInline
+                poster="/video/demo-poster.jpg"
+              >
+                <source src="/video/demo.mp4" type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
+
+              {/* Optional overlay with play button or controls */}
+              <div className="absolute inset-0 bg-black/10 pointer-events-none"></div>
             </div>
           </div>
 
