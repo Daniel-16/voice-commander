@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Navbar from "../components/Navbar";
+import DeviceRestriction from "../components/DeviceRestriction";
+import { isDesktop } from "../utils/deviceDetection";
+import { WS_URL } from "../utils/constants";
 
 interface SpeechRecognition extends EventTarget {
   continuous: boolean;
@@ -35,7 +38,7 @@ declare global {
   }
 }
 
-const WS_URL = "ws://localhost:8080";
+const MAX_RECONNECT_DELAY = 30000;
 
 export default function HomePage() {
   const [status, setStatus] = useState("Initializing...");
@@ -45,12 +48,12 @@ export default function HomePage() {
     Array<{ type: string; content: string; timestamp: string }>
   >([]);
   const [extensionStatus, setExtensionStatus] = useState<string>("Unknown");
+  const [isDesktopDevice, setIsDesktopDevice] = useState(true);
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttempts = useRef<number>(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const speechRecognition = useRef<SpeechRecognition | null>(null);
-  const MAX_RECONNECT_DELAY = 30000;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -60,10 +63,18 @@ export default function HomePage() {
     scrollToBottom();
   }, [messages]);
 
+  useEffect(() => {
+    setIsDesktopDevice(isDesktop());
+  }, []);
+
   const addMessage = (type: string, content: string) => {
     const timestamp = new Date().toLocaleTimeString();
     setMessages((prev) => [...prev, { type, content, timestamp }]);
   };
+
+  if (!isDesktopDevice) {
+    return <DeviceRestriction />;
+  }
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -134,12 +145,19 @@ export default function HomePage() {
   };
 
   const connectWebSocket = useCallback(() => {
+    if (!WS_URL) {
+      console.error("WebSocket URL is not available");
+      setStatus("Configuration Error");
+      addMessage("error", "WebSocket configuration error");
+      return;
+    }
+
     if (socketRef.current?.readyState === WebSocket.CONNECTING) {
       console.log("Already attempting to connect...");
       return;
     }
 
-    console.log("Attempting to connect WebSocket...");
+    console.log("Attempting to connect WebSocket to:", WS_URL);
     setStatus("Connecting...");
 
     if (reconnectTimerRef.current) {
@@ -158,9 +176,9 @@ export default function HomePage() {
       socketRef.current = new WebSocket(WS_URL);
 
       socketRef.current.onopen = () => {
-        console.log("WebSocket connected");
-        setStatus("Initializing...");
-        addMessage("system", "Web interface connected");
+        console.log("WebSocket connected successfully");
+        setStatus("Connected");
+        addMessage("system", "Connected to server");
         reconnectAttempts.current = 0;
       };
 
@@ -207,8 +225,19 @@ export default function HomePage() {
 
       socketRef.current.onerror = (error) => {
         console.error("WebSocket error:", error);
+        const errorMessage =
+          "Unable to connect to server. Please ensure the server is running.";
         setStatus("Connection Error");
-        addMessage("error", "Connection error occurred");
+        addMessage("error", errorMessage);
+
+        // Add more detailed error information for debugging
+        if (process.env.NODE_ENV === "development") {
+          console.debug("WebSocket Debug Info:", {
+            url: WS_URL,
+            readyState: socketRef.current?.readyState,
+            error,
+          });
+        }
       };
 
       socketRef.current.onclose = (event) => {
@@ -218,17 +247,34 @@ export default function HomePage() {
           "Reason:",
           event.reason || "No reason provided"
         );
+
+        let message = "Disconnected from server";
+        if (event.code === 1006) {
+          message += " - Unable to establish connection";
+        }
+
         setStatus("Disconnected - Retrying...");
-        addMessage("system", "Disconnected from server");
+        addMessage("system", message);
 
-        const delay = Math.min(
-          1000 * Math.pow(2, reconnectAttempts.current),
-          MAX_RECONNECT_DELAY
-        );
-        reconnectAttempts.current++;
+        if (reconnectAttempts.current < 5) {
+          // Limit retry attempts
+          const delay = Math.min(
+            1000 * Math.pow(2, reconnectAttempts.current),
+            MAX_RECONNECT_DELAY
+          );
+          reconnectAttempts.current++;
 
-        console.log(`Attempting to reconnect in ${delay}ms...`);
-        reconnectTimerRef.current = setTimeout(connectWebSocket, delay);
+          console.log(
+            `Attempting to reconnect in ${delay}ms... (Attempt ${reconnectAttempts.current}/5)`
+          );
+          reconnectTimerRef.current = setTimeout(connectWebSocket, delay);
+        } else {
+          setStatus("Connection Failed");
+          addMessage(
+            "error",
+            "Maximum reconnection attempts reached. Please refresh the page to try again."
+          );
+        }
       };
     } catch (error) {
       console.error("Error creating WebSocket:", error);
