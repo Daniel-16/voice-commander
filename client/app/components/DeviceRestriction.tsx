@@ -44,7 +44,7 @@ const DeviceRestriction = () => {
 
         <Link
           href="/"
-          className="relative block px-8 py-3 md:py-4 md:text-lg md:px-10 rounded-lg border-2 border-transparent bg-gradient-to-r from-blue-600 via-purple-500 to-blue-600 bg-[length:200%_auto] animate-gradient"
+          className="relative block text-white px-8 py-3 md:py-4 md:text-lg md:px-10 rounded-lg border-2 border-transparent bg-gradient-to-r from-blue-600 via-purple-500 to-blue-600 bg-[length:200%_auto] animate-gradient"
         >
           Return to Home
         </Link>
