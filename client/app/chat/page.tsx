@@ -41,6 +41,7 @@ declare global {
 const MAX_RECONNECT_DELAY = 30000;
 
 export default function HomePage() {
+  const [mounted, setMounted] = useState(false);
   const [status, setStatus] = useState("Initializing...");
   const [isRecording, setIsRecording] = useState(false);
   const [inputText, setInputText] = useState("");
@@ -48,33 +49,24 @@ export default function HomePage() {
     Array<{ type: string; content: string; timestamp: string }>
   >([]);
   const [extensionStatus, setExtensionStatus] = useState<string>("Unknown");
-  const [isDesktopDevice, setIsDesktopDevice] = useState(true);
+  const [shouldRenderContent, setShouldRenderContent] = useState(false);
+
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttempts = useRef<number>(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const speechRecognition = useRef<SpeechRecognition | null>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  useEffect(() => {
-    setIsDesktopDevice(isDesktop());
+    setMounted(true);
+    setShouldRenderContent(isDesktop());
   }, []);
 
-  const addMessage = (type: string, content: string) => {
-    const timestamp = new Date().toLocaleTimeString();
-    setMessages((prev) => [...prev, { type, content, timestamp }]);
-  };
+  useEffect(() => {
+    if (!shouldRenderContent) return;
 
-  if (!isDesktopDevice) {
-    return <DeviceRestriction />;
-  }
+    scrollToBottom();
+  }, [messages, shouldRenderContent]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -433,6 +425,23 @@ export default function HomePage() {
       };
     }
   };
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const addMessage = (type: string, content: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    setMessages((prev) => [...prev, { type, content, timestamp }]);
+  };
+
+  if (!mounted) {
+    return null;
+  }
+
+  if (!shouldRenderContent) {
+    return <DeviceRestriction />;
+  }
 
   return (
     <>
