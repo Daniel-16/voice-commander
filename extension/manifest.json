@@ -4,7 +4,7 @@
   "version": "1.0",
   "description": "Executes browser commands received via WebSocket.",
   "permissions": ["tabs", "scripting", "activeTab"],
-  "host_permissions": ["<all_urls>"],
+  "host_permissions": ["<all_urls>", "https://*.youtube.com/*"],
   "background": {
     "service_worker": "background.js"
   },

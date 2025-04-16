@@ -1,4 +1,4 @@
-const WS_URL = "ws://localhost:8080/extension"; // Backend WebSocket URL + identifier path
+const WS_URL = "ws://localhost:8080/extension";
 let socket = null;
 let reconnectInterval = 5000;
 let isRegistered = false;
@@ -9,7 +9,6 @@ function connect() {
 
   socket.onopen = () => {
     console.log("WebSocket connected");
-    // Send registration message
     registerExtension();
   };
 
@@ -44,7 +43,6 @@ function connect() {
     updatePopupStatus(`Disconnected (Code: ${event.code})`);
     socket = null;
     isRegistered = false;
-    // Attempt to reconnect
     setTimeout(connect, reconnectInterval);
   };
 
@@ -52,8 +50,7 @@ function connect() {
     console.error("WebSocket error:", error);
     updatePopupStatus("Error");
     isRegistered = false;
-    // The onclose event will likely fire after this, triggering reconnect
-    socket = null; // Ensure socket is nullified
+    socket = null;
   };
 }
 
@@ -106,22 +103,37 @@ async function executeCommand(command) {
         result.success = true;
         break;
 
+      case "play_video":
+        const searchTerm = command.value;
+        const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(
+          searchTerm
+        )}`;
+        const newTab = await chrome.tabs.create({ url: searchUrl });
+
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        await chrome.scripting.executeScript({
+          target: { tabId: newTab.id },
+          func: autoPlayFirstVideo,
+        });
+        result.success = true;
+        break;
+
       case "click":
         await chrome.scripting.executeScript({
           target: { tabId: tabId },
           func: domClick,
-          args: [command.value], // CSS Selector
+          args: [command.value],
         });
-        result.success = true; // Assume success for now
+        result.success = true;
         break;
 
       case "scroll":
         await chrome.scripting.executeScript({
           target: { tabId: tabId },
           func: domScroll,
-          args: [command.value], // Pixels (positive/negative/0/large)
+          args: [command.value],
         });
-        result.success = true; // Assume success
+        result.success = true;
         break;
 
       case "type":
@@ -135,7 +147,7 @@ async function executeCommand(command) {
             func: domType,
             args: [command.value.selector, command.value.text],
           });
-          result.success = true; // Assume success
+          result.success = true;
         } else {
           throw new Error("Invalid 'type' command value format.");
         }
@@ -168,22 +180,18 @@ async function executeCommand(command) {
       default:
         throw new Error(`Unsupported command action: ${command.action}`);
     }
-    // Send confirmation back to backend
     safeSend({ type: "execution_confirmation", payload: command });
   } catch (error) {
     console.error("Error executing command:", command, error);
     result.error = error.message;
-    // Send error back to backend
     safeSend({
       type: "execution_error",
       payload: { command: command, error: error.message },
     });
   }
-  // Optional: update popup or show notification based on result
   console.log("Execution result:", result);
 }
 
-// --- DOM Interaction Functions (to be injected) ---
 function domClick(selector) {
   try {
     const element = document.querySelector(selector);
@@ -251,7 +259,6 @@ function domType(selector, text) {
     console.error(`Alris: Error typing in selector "${selector}":`, e);
   }
 }
-// --- End DOM Functions ---
 
 function updatePopupStatus(statusText) {
   chrome.runtime
@@ -288,3 +295,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 });
+
+function autoPlayFirstVideo() {
+  try {
+    const videoLink = document.querySelector(
+      "#contents ytd-video-renderer a#thumbnail"
+    );
+    if (videoLink) {
+      videoLink.click();
+      return;
+    }
+    
+    const firstVideo = document.querySelector("ytd-video-renderer");
+    if (firstVideo) {
+      const link = firstVideo.querySelector("a#thumbnail");
+      if (link) {
+        link.click();
+        return;
+      }
+    }
+
+    console.error("Alris: Could not find video to play");
+  } catch (e) {
+    console.error("Alris: Error auto-playing video:", e);
+  }
+}
