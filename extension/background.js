@@ -99,22 +99,37 @@ async function executeCommand(command) {
         if (!url.startsWith("http://") && !url.startsWith("https://")) {
           url = "https://" + url;
         }
-        await chrome.tabs.create({ url: url });
-        result.success = true;
-        break;
 
-      case "play_video":
-        const searchTerm = command.value;
-        const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(
-          searchTerm
-        )}`;
-        const newTab = await chrome.tabs.create({ url: searchUrl });
+        if (url.includes("youtube.com/results?search_query=")) {
+          const searchQuery = decodeURIComponent(url.split("search_query=")[1]);
+          const newTab = await chrome.tabs.create({ url });
 
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-        await chrome.scripting.executeScript({
-          target: { tabId: newTab.id },
-          func: autoPlayFirstVideo,
-        });
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+
+          let attempts = 0;
+          const maxAttempts = 5;
+
+          while (attempts < maxAttempts) {
+            try {
+              const clicked = await chrome.scripting.executeScript({
+                target: { tabId: newTab.id },
+                func: findAndPlayVideo,
+                args: [searchQuery],
+              });
+
+              if (clicked && clicked[0] && clicked[0].result === true) {
+                break;
+              }
+            } catch (e) {
+              console.log("Attempt failed, retrying...", e);
+            }
+
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            attempts++;
+          }
+        } else {
+          await chrome.tabs.create({ url });
+        }
         result.success = true;
         break;
 
@@ -296,27 +311,111 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-function autoPlayFirstVideo() {
-  try {
-    const videoLink = document.querySelector(
-      "#contents ytd-video-renderer a#thumbnail"
-    );
-    if (videoLink) {
-      videoLink.click();
-      return;
-    }
-    
-    const firstVideo = document.querySelector("ytd-video-renderer");
-    if (firstVideo) {
-      const link = firstVideo.querySelector("a#thumbnail");
-      if (link) {
-        link.click();
-        return;
-      }
-    }
+function findAndPlayVideo(searchQuery) {
+  return new Promise((resolve) => {
+    try {
+      const checkForVideos = setInterval(() => {
+        const videoElements = document.querySelectorAll("a#video-title");
 
-    console.error("Alris: Could not find video to play");
-  } catch (e) {
-    console.error("Alris: Error auto-playing video:", e);
-  }
+        if (videoElements && videoElements.length > 0) {
+          clearInterval(checkForVideos);
+
+          const normalizedQuery = searchQuery
+            .toLowerCase()
+            .replace(/[^a-z0-9\s]/g, "");
+
+          const videoTitles = Array.from(videoElements);
+
+          function getMatchScore(title, query) {
+            const normalizedTitle = title
+              .toLowerCase()
+              .replace(/[^a-z0-9\s]/g, "");
+            if (normalizedTitle === query) return 100;
+            if (normalizedTitle.includes(query)) return 80;
+
+            const queryWords = query.split(" ");
+            const matchedWords = queryWords.filter((word) =>
+              normalizedTitle.includes(word)
+            );
+            return (matchedWords.length / queryWords.length) * 60;
+          }
+
+          let bestMatch = null;
+          let bestScore = 0;
+
+          for (const titleElement of videoTitles) {
+            if (
+              titleElement.closest(
+                "ytd-ad-slot-renderer, ytd-in-feed-ad-layout-renderer, ytd-promoted-video-renderer"
+              )
+            ) {
+              continue;
+            }
+
+            const visibleTitle = titleElement.textContent?.trim() || "";
+            const ariaLabel = titleElement.getAttribute("aria-label") || "";
+            const title = visibleTitle || ariaLabel;
+
+            if (!title) continue;
+
+            const score = getMatchScore(title, normalizedQuery);
+
+            if (score > bestScore) {
+              bestScore = score;
+              bestMatch = titleElement;
+            }
+
+            if (score === 100) break;
+          }
+
+          if (bestMatch) {
+            bestMatch.scrollIntoView({ behavior: "smooth", block: "center" });
+
+            setTimeout(() => {
+              console.log(
+                "Alris: Playing video -",
+                bestMatch.textContent?.trim()
+              );
+              bestMatch.click();
+              resolve(true);
+            }, 1000);
+          } else {
+            console.log(
+              "Alris: No matching video found, clicking first available video"
+            );
+            const firstVideo = videoTitles.find(
+              (el) =>
+                !el.closest(
+                  "ytd-ad-slot-renderer, ytd-in-feed-ad-layout-renderer, ytd-promoted-video-renderer"
+                )
+            );
+            if (firstVideo) {
+              firstVideo.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+              });
+              setTimeout(() => {
+                firstVideo.click();
+                resolve(true);
+              }, 1000);
+            } else {
+              console.error(
+                "Alris: Could not find any suitable videos to play"
+              );
+              resolve(false);
+            }
+          }
+        }
+      }, 500);
+
+      setTimeout(() => {
+        clearInterval(checkForVideos);
+        console.error("Alris: Timeout waiting for video elements");
+        resolve(false);
+      }, 10000);
+    } catch (e) {
+      console.error("Alris: Error auto-playing video:", e);
+      resolve(false);
+    }
+  });
 }
