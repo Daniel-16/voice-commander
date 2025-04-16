@@ -74,13 +74,22 @@ Features:
 - Browser actions
 
 ## Available Commands
+The following commands are currently supported:
 
-- `open [url]`: Opens a new tab with the specified URL
-- `close`: Closes the current tab
-- `back`: Navigates back in history
-- `forward`: Navigates forward in history
-- `refresh`: Reloads the current page
-- `bookmark`: Bookmarks the current page
+- `search [query]` - Performs a web search for the specified query
+- `open [url]` - Opens the specified URL in a new tab
+- `refresh` - Refreshes the current active tab
+- `play video of [query]` - Searches and plays a video matching the query
+- `play music of [query]` - Searches and plays music matching the query
+
+Examples:
+
+- `search weather in London` - Searches for current weather in London
+- `open github.com` - Opens GitHub in a new tab
+- `refresh` - Refreshes your current tab
+- `play video of cute puppies` - Searches and plays a video of cute puppies
+- `play music of The Beatles` - Searches and plays Beatles music
+
 
 ## Development
 
