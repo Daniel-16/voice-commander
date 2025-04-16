@@ -280,7 +280,6 @@ async function getCommandFromLLM(userInput) {
 
 async function processVoiceCommand(data) {
   if (typeof data.payload === "string") {
-    // Direct text processing - no more audio handling needed
     console.log(`Processing voice command text: ${data.payload}`);
     try {
       const commandJson = await getCommandFromLLM(data.payload);
