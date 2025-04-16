@@ -1,4 +1,4 @@
-const WS_URL = "ws://localhost:8080/extension"; // Backend WebSocket URL + identifier path
+const WS_URL = "ws://localhost:8080/extension";
 let socket = null;
 let reconnectInterval = 5000;
 let isRegistered = false;
@@ -9,7 +9,6 @@ function connect() {
 
   socket.onopen = () => {
     console.log("WebSocket connected");
-    // Send registration message
     registerExtension();
   };
 
@@ -44,7 +43,6 @@ function connect() {
     updatePopupStatus(`Disconnected (Code: ${event.code})`);
     socket = null;
     isRegistered = false;
-    // Attempt to reconnect
     setTimeout(connect, reconnectInterval);
   };
 
@@ -52,8 +50,7 @@ function connect() {
     console.error("WebSocket error:", error);
     updatePopupStatus("Error");
     isRegistered = false;
-    // The onclose event will likely fire after this, triggering reconnect
-    socket = null; // Ensure socket is nullified
+    socket = null;
   };
 }
 
@@ -102,7 +99,37 @@ async function executeCommand(command) {
         if (!url.startsWith("http://") && !url.startsWith("https://")) {
           url = "https://" + url;
         }
-        await chrome.tabs.create({ url: url });
+
+        if (url.includes("youtube.com/results?search_query=")) {
+          const searchQuery = decodeURIComponent(url.split("search_query=")[1]);
+          const newTab = await chrome.tabs.create({ url });
+
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+
+          let attempts = 0;
+          const maxAttempts = 5;
+
+          while (attempts < maxAttempts) {
+            try {
+              const clicked = await chrome.scripting.executeScript({
+                target: { tabId: newTab.id },
+                func: findAndPlayVideo,
+                args: [searchQuery],
+              });
+
+              if (clicked && clicked[0] && clicked[0].result === true) {
+                break;
+              }
+            } catch (e) {
+              console.log("Attempt failed, retrying...", e);
+            }
+
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            attempts++;
+          }
+        } else {
+          await chrome.tabs.create({ url });
+        }
         result.success = true;
         break;
 
@@ -110,18 +137,18 @@ async function executeCommand(command) {
         await chrome.scripting.executeScript({
           target: { tabId: tabId },
           func: domClick,
-          args: [command.value], // CSS Selector
+          args: [command.value],
         });
-        result.success = true; // Assume success for now
+        result.success = true;
         break;
 
       case "scroll":
         await chrome.scripting.executeScript({
           target: { tabId: tabId },
           func: domScroll,
-          args: [command.value], // Pixels (positive/negative/0/large)
+          args: [command.value],
         });
-        result.success = true; // Assume success
+        result.success = true;
         break;
 
       case "type":
@@ -135,7 +162,7 @@ async function executeCommand(command) {
             func: domType,
             args: [command.value.selector, command.value.text],
           });
-          result.success = true; // Assume success
+          result.success = true;
         } else {
           throw new Error("Invalid 'type' command value format.");
         }
@@ -168,22 +195,18 @@ async function executeCommand(command) {
       default:
         throw new Error(`Unsupported command action: ${command.action}`);
     }
-    // Send confirmation back to backend
     safeSend({ type: "execution_confirmation", payload: command });
   } catch (error) {
     console.error("Error executing command:", command, error);
     result.error = error.message;
-    // Send error back to backend
     safeSend({
       type: "execution_error",
       payload: { command: command, error: error.message },
     });
   }
-  // Optional: update popup or show notification based on result
   console.log("Execution result:", result);
 }
 
-// --- DOM Interaction Functions (to be injected) ---
 function domClick(selector) {
   try {
     const element = document.querySelector(selector);
@@ -251,7 +274,6 @@ function domType(selector, text) {
     console.error(`Alris: Error typing in selector "${selector}":`, e);
   }
 }
-// --- End DOM Functions ---
 
 function updatePopupStatus(statusText) {
   chrome.runtime
@@ -288,3 +310,112 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 });
+
+function findAndPlayVideo(searchQuery) {
+  return new Promise((resolve) => {
+    try {
+      const checkForVideos = setInterval(() => {
+        const videoElements = document.querySelectorAll("a#video-title");
+
+        if (videoElements && videoElements.length > 0) {
+          clearInterval(checkForVideos);
+
+          const normalizedQuery = searchQuery
+            .toLowerCase()
+            .replace(/[^a-z0-9\s]/g, "");
+
+          const videoTitles = Array.from(videoElements);
+
+          function getMatchScore(title, query) {
+            const normalizedTitle = title
+              .toLowerCase()
+              .replace(/[^a-z0-9\s]/g, "");
+            if (normalizedTitle === query) return 100;
+            if (normalizedTitle.includes(query)) return 80;
+
+            const queryWords = query.split(" ");
+            const matchedWords = queryWords.filter((word) =>
+              normalizedTitle.includes(word)
+            );
+            return (matchedWords.length / queryWords.length) * 60;
+          }
+
+          let bestMatch = null;
+          let bestScore = 0;
+
+          for (const titleElement of videoTitles) {
+            if (
+              titleElement.closest(
+                "ytd-ad-slot-renderer, ytd-in-feed-ad-layout-renderer, ytd-promoted-video-renderer"
+              )
+            ) {
+              continue;
+            }
+
+            const visibleTitle = titleElement.textContent?.trim() || "";
+            const ariaLabel = titleElement.getAttribute("aria-label") || "";
+            const title = visibleTitle || ariaLabel;
+
+            if (!title) continue;
+
+            const score = getMatchScore(title, normalizedQuery);
+
+            if (score > bestScore) {
+              bestScore = score;
+              bestMatch = titleElement;
+            }
+
+            if (score === 100) break;
+          }
+
+          if (bestMatch) {
+            bestMatch.scrollIntoView({ behavior: "smooth", block: "center" });
+
+            setTimeout(() => {
+              console.log(
+                "Alris: Playing video -",
+                bestMatch.textContent?.trim()
+              );
+              bestMatch.click();
+              resolve(true);
+            }, 1000);
+          } else {
+            console.log(
+              "Alris: No matching video found, clicking first available video"
+            );
+            const firstVideo = videoTitles.find(
+              (el) =>
+                !el.closest(
+                  "ytd-ad-slot-renderer, ytd-in-feed-ad-layout-renderer, ytd-promoted-video-renderer"
+                )
+            );
+            if (firstVideo) {
+              firstVideo.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+              });
+              setTimeout(() => {
+                firstVideo.click();
+                resolve(true);
+              }, 1000);
+            } else {
+              console.error(
+                "Alris: Could not find any suitable videos to play"
+              );
+              resolve(false);
+            }
+          }
+        }
+      }, 500);
+
+      setTimeout(() => {
+        clearInterval(checkForVideos);
+        console.error("Alris: Timeout waiting for video elements");
+        resolve(false);
+      }, 10000);
+    } catch (e) {
+      console.error("Alris: Error auto-playing video:", e);
+      resolve(false);
+    }
+  });
+}
