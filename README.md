@@ -4,7 +4,7 @@ A powerful command system that allows users to control their browser through voi
 
 **Author:** Daniel Toba  
 **Copyright:** © 2025 Daniel Toba  
-**License:** [MIT](LICENSE)
+**License:** [Apache License 2.0](LICENSE)
 
 ## Project Structure
 
@@ -110,4 +110,4 @@ npm run build
 
 ## License
 
-MIT
+Apache License 2.0

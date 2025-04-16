@@ -6,9 +6,10 @@ Thank you for your interest in contributing to Alris! This document provides gui
 
 Alris is created and maintained by Daniel Toba. When contributing to this repository, please respect the following guidelines:
 
-1. All contributions will be licensed under the MIT License
+1. All contributions will be licensed under the Apache License 2.0
 2. Maintain the copyright headers in source files
 3. Add yourself to the contributors list when making significant contributions
+4. If you modify any files, ensure they carry prominent notices stating that you changed the files (as required by Apache License 2.0)
 
 ## How to Contribute
 
@@ -36,4 +37,4 @@ Feel free to open an issue for any questions or concerns.
 
 ---
 
-By contributing, you agree that your contributions will be licensed under the MIT License.
+By contributing, you agree that your contributions will be licensed under the Apache License 2.0. Please read the LICENSE and NOTICE files in the root directory of this repository for full details.
