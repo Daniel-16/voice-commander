@@ -222,7 +222,6 @@ export default function HomePage() {
         setStatus("Connection Error");
         addMessage("error", errorMessage);
 
-        // Add more detailed error information for debugging
         if (process.env.NODE_ENV === "development") {
           console.debug("WebSocket Debug Info:", {
             url: WS_URL,
@@ -249,7 +248,6 @@ export default function HomePage() {
         addMessage("system", message);
 
         if (reconnectAttempts.current < 5) {
-          // Limit retry attempts
           const delay = Math.min(
             1000 * Math.pow(2, reconnectAttempts.current),
             MAX_RECONNECT_DELAY
@@ -343,7 +341,6 @@ export default function HomePage() {
     }
   };
 
-  // Add new function to get status details
   const getStatusDetails = (status: string) => {
     if (status === "Ready") {
       return {
@@ -447,7 +444,6 @@ export default function HomePage() {
     <>
       <Navbar />
       <main className="flex min-h-screen flex-col items-center bg-white pt-20">
-        {/* Status Toast */}
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
           <div
             className={`transform transition-all duration-300 ${
@@ -497,7 +493,6 @@ export default function HomePage() {
         </div>
 
         <div className="w-full max-w-3xl flex flex-col px-4 md:px-0">
-          {/* Status Bar - Now more subtle */}
           <div className="flex items-center justify-end py-4 border-b border-gray-100">
             <div className="flex items-center gap-2 opacity-75 hover:opacity-100 transition-opacity">
               <div
@@ -511,7 +506,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Message History */}
           <div className="flex-1 min-h-[calc(100vh-280px)] py-6 space-y-4 overflow-y-auto">
             {messages.map((msg, index) => (
               <div
@@ -541,7 +535,6 @@ export default function HomePage() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input Area */}
           <div className="sticky bottom-0 bg-white border-t border-gray-100 py-4">
             <form
               onSubmit={(e) => e.preventDefault()}
