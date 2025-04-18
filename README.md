@@ -6,6 +6,15 @@ A powerful command system that allows users to control their browser through voi
 **Copyright:** © 2025 Daniel Toba  
 **License:** [Apache License 2.0](LICENSE)
 
+## Demo
+
+Watch how Alris works in action:
+
+<video width="100%" controls>
+  <source src="client/public/video/alris-demo.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
 ## Project Structure
 
 - `client/`: Next.js web application for the user interface
@@ -74,6 +83,7 @@ Features:
 - Browser actions
 
 ## Available Commands
+
 The following commands are currently supported:
 
 - `search [query]` - Performs a web search for the specified query
@@ -89,7 +99,6 @@ Examples:
 - `refresh` - Refreshes your current tab
 - `play video of cute puppies` - Searches and plays a video of cute puppies
 - `play music of The Beatles` - Searches and plays Beatles music
-
 
 ## Development
 
