@@ -94,15 +94,56 @@ async function executeCommand(command) {
     const tabId = currentTab.id;
 
     switch (command.action) {
+      case "suggest_music":
+        const { song, artist } = command.value;
+        const searchQuery = `${song} ${artist}`;
+        const spotifyUrl = `open.spotify.com/search/${encodeURIComponent(
+          searchQuery
+        )}`;
+        const newTab = await chrome.tabs.create({
+          url: `https://${spotifyUrl}`,
+        });
+
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+
+        let attempts = 0;
+        const maxAttempts = 5;
+
+        while (attempts < maxAttempts) {
+          try {
+            const clicked = await chrome.scripting.executeScript({
+              target: { tabId: newTab.id },
+              func: findAndPlaySpotifyTrack,
+              args: [searchQuery],
+            });
+
+            if (clicked && clicked[0] && clicked[0].result === true) {
+              break;
+            }
+          } catch (e) {
+            console.log("Attempt failed, retrying...", e);
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          attempts++;
+        }
+        result.success = true;
+        break;
+
       case "open_url":
-        let url = command.value;
-        if (!url.startsWith("http://") && !url.startsWith("https://")) {
-          url = "https://" + url;
+        let targetUrl = command.value;
+        if (
+          !targetUrl.startsWith("http://") &&
+          !targetUrl.startsWith("https://")
+        ) {
+          targetUrl = "https://" + targetUrl;
         }
 
-        if (url.includes("youtube.com/results?search_query=")) {
-          const searchQuery = decodeURIComponent(url.split("search_query=")[1]);
-          const newTab = await chrome.tabs.create({ url });
+        if (targetUrl.includes("youtube.com/results?search_query=")) {
+          const searchQuery = decodeURIComponent(
+            targetUrl.split("search_query=")[1]
+          );
+          const newTab = await chrome.tabs.create({ url: targetUrl });
 
           await new Promise((resolve) => setTimeout(resolve, 2000));
 
@@ -127,9 +168,11 @@ async function executeCommand(command) {
             await new Promise((resolve) => setTimeout(resolve, 1000));
             attempts++;
           }
-        } else if (url.includes("open.spotify.com/search/")) {
-          const searchQuery = decodeURIComponent(url.split("/search/")[1]);
-          const newTab = await chrome.tabs.create({ url });
+        } else if (targetUrl.includes("open.spotify.com/search/")) {
+          const searchQuery = decodeURIComponent(
+            targetUrl.split("/search/")[1]
+          );
+          const newTab = await chrome.tabs.create({ url: targetUrl });
 
           await new Promise((resolve) => setTimeout(resolve, 2000));
 
@@ -155,7 +198,7 @@ async function executeCommand(command) {
             attempts++;
           }
         } else {
-          await chrome.tabs.create({ url });
+          await chrome.tabs.create({ url: targetUrl });
         }
         result.success = true;
         break;
