@@ -3,11 +3,10 @@ const reconnectBtn = document.getElementById("reconnectBtn");
 let lastStatus = "";
 
 function updateStatus(text) {
-  if (text === lastStatus) return; // Prevent unnecessary DOM updates
+  if (text === lastStatus) return;
   lastStatus = text;
   statusElement.textContent = text;
-
-  // Update visual indication
+  
   statusElement.className = text.toLowerCase().includes("connected")
     ? "status-connected"
     : text.toLowerCase().includes("error")
@@ -15,7 +14,6 @@ function updateStatus(text) {
     : "status-disconnected";
 }
 
-// Get initial status
 chrome.runtime
   .sendMessage({ type: "getStatus" })
   .then((response) => {
@@ -26,17 +24,15 @@ chrome.runtime
     updateStatus("Error loading status");
   });
 
-// Listen for status updates from background script
 chrome.runtime.onMessage.addListener((message) => {
   if (message.type === "statusUpdate") {
     updateStatus(message.status);
   }
 });
 
-// Handle reconnect button with debounce
 let reconnectTimeout = null;
 reconnectBtn.addEventListener("click", () => {
-  if (reconnectTimeout) return; // Prevent spam clicking
+  if (reconnectTimeout) return;
 
   updateStatus("Attempting reconnect...");
   reconnectBtn.disabled = true;
@@ -51,7 +47,6 @@ reconnectBtn.addEventListener("click", () => {
       updateStatus("Error reconnecting");
     });
 
-  // Prevent multiple reconnect attempts
   reconnectTimeout = setTimeout(() => {
     reconnectBtn.disabled = false;
     reconnectTimeout = null;
