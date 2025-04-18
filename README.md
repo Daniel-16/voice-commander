@@ -10,10 +10,7 @@ A powerful command system that allows users to control their browser through voi
 
 Watch how Alris works in action:
 
-<video width="100%" controls>
-  <source src="client/public/video/alris-demo-2.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
+![Alris Demo](client/public/video/alris-demo.gif)
 
 
 ## Project Structure
