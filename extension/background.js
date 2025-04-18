@@ -127,6 +127,33 @@ async function executeCommand(command) {
             await new Promise((resolve) => setTimeout(resolve, 1000));
             attempts++;
           }
+        } else if (url.includes("open.spotify.com/search/")) {
+          const searchQuery = decodeURIComponent(url.split("/search/")[1]);
+          const newTab = await chrome.tabs.create({ url });
+
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+
+          let attempts = 0;
+          const maxAttempts = 5;
+
+          while (attempts < maxAttempts) {
+            try {
+              const clicked = await chrome.scripting.executeScript({
+                target: { tabId: newTab.id },
+                func: findAndPlaySpotifyTrack,
+                args: [searchQuery],
+              });
+
+              if (clicked && clicked[0] && clicked[0].result === true) {
+                break;
+              }
+            } catch (e) {
+              console.log("Attempt failed, retrying...", e);
+            }
+
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            attempts++;
+          }
         } else {
           await chrome.tabs.create({ url });
         }
@@ -415,6 +442,183 @@ function findAndPlayVideo(searchQuery) {
       }, 10000);
     } catch (e) {
       console.error("Alris: Error auto-playing video:", e);
+      resolve(false);
+    }
+  });
+}
+
+function findAndPlaySpotifyTrack(searchQuery) {
+  return new Promise((resolve) => {
+    try {
+      const checkForTracks = setInterval(() => {
+        const trackElements = document.querySelectorAll(
+          [
+            'a[href^="/track/"]',
+            "a.btE2c3IKaOXZ4VNAb8WQ",
+            'div[role="row"]',
+          ].join(",")
+        );
+
+        if (trackElements && trackElements.length > 0) {
+          clearInterval(checkForTracks);
+
+          const normalizedQuery = searchQuery
+            .toLowerCase()
+            .replace(/[^a-z0-9\s]/g, "");
+
+          function getMatchScore(title, query) {
+            const normalizedTitle = title
+              .toLowerCase()
+              .replace(/[^a-z0-9\s]/g, "");
+            if (normalizedTitle === query) return 100;
+            if (normalizedTitle.includes(query)) return 80;
+
+            const queryWords = query.split(" ");
+            const matchedWords = queryWords.filter((word) =>
+              normalizedTitle.includes(word)
+            );
+            return (matchedWords.length / queryWords.length) * 60;
+          }
+
+          let bestMatch = null;
+          let bestScore = 0;
+
+          for (const element of trackElements) {
+            const titleElement =
+              element.querySelector('[data-encore-id="text"]') ||
+              element.querySelector('[dir="auto"]') ||
+              element;
+
+            if (!titleElement) continue;
+
+            const title = titleElement.textContent?.trim() || "";
+            if (!title) continue;
+
+            const score = getMatchScore(title, normalizedQuery);
+
+            if (score > bestScore) {
+              bestScore = score;
+              bestMatch = element;
+            }
+
+            if (score === 100) break;
+          }
+
+          if (bestMatch) {
+            bestMatch.scrollIntoView({ behavior: "smooth", block: "center" });
+
+            setTimeout(() => {
+              let playButton = null;
+
+              playButton = bestMatch.querySelector(
+                'button[data-testid="play-button"]'
+              );
+
+              if (!playButton && bestMatch.closest('div[role="row"]')) {
+                playButton = bestMatch
+                  .closest('div[role="row"]')
+                  .querySelector('button[data-testid="play-button"]');
+              }
+
+              if (!playButton) {
+                const row =
+                  bestMatch.closest('div[role="row"]') ||
+                  bestMatch.parentElement;
+                if (row) {
+                  const siblings = Array.from(row.children);
+                  for (const sibling of siblings) {
+                    const btn = sibling.querySelector(
+                      'button[data-testid="play-button"]'
+                    );
+                    if (btn) {
+                      playButton = btn;
+                      break;
+                    }
+                  }
+                }
+              }
+
+              if (playButton) {
+                console.log(
+                  "Alris: Playing Spotify track -",
+                  bestMatch.textContent?.trim()
+                );
+                playButton.click();
+                resolve(true);
+              } else {
+                console.log(
+                  "Alris: Play button not found, trying to click the track"
+                );
+                bestMatch.click();
+
+                setTimeout(() => {
+                  const mainPlayButton = document.querySelector(
+                    'button[data-testid="play-button"]'
+                  );
+                  if (mainPlayButton) {
+                    mainPlayButton.click();
+                    resolve(true);
+                  } else {
+                    console.error("Alris: Could not find any play button");
+                    resolve(false);
+                  }
+                }, 2000);
+              }
+            }, 1500);
+          } else {
+            console.log(
+              "Alris: No matching track found, trying first available track"
+            );
+            const firstTrack = trackElements[0];
+            if (firstTrack) {
+              firstTrack.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+              });
+              setTimeout(() => {
+                const playButton =
+                  firstTrack.querySelector(
+                    'button[data-testid="play-button"]'
+                  ) ||
+                  firstTrack
+                    .closest('div[role="row"]')
+                    ?.querySelector('button[data-testid="play-button"]');
+                if (playButton) {
+                  playButton.click();
+                  resolve(true);
+                } else {
+                  firstTrack.click();
+                  setTimeout(() => {
+                    const mainPlayButton = document.querySelector(
+                      'button[data-testid="play-button"]'
+                    );
+                    if (mainPlayButton) {
+                      mainPlayButton.click();
+                      resolve(true);
+                    } else {
+                      console.error(
+                        "Alris: Play button not found for the first track"
+                      );
+                      resolve(false);
+                    }
+                  }, 2000);
+                }
+              }, 1500);
+            } else {
+              console.error("Alris: Could not find any tracks to play");
+              resolve(false);
+            }
+          }
+        }
+      }, 1000);
+
+      setTimeout(() => {
+        clearInterval(checkForTracks);
+        console.error("Alris: Timeout waiting for Spotify tracks");
+        resolve(false);
+      }, 15000);
+    } catch (e) {
+      console.error("Alris: Error auto-playing Spotify track:", e);
       resolve(false);
     }
   });
