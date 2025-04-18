@@ -79,12 +79,10 @@ const Hero = () => {
                 Your browser does not support the video tag.
               </video>
 
-              {/* Optional overlay with play button or controls */}
               <div className="absolute inset-0 bg-black/10 pointer-events-none"></div>
             </div>
           </div>
 
-          {/* Decorative elements */}
           <div className="absolute -z-10">
             <div className="absolute right-0 w-[200px] h-[200px] bg-blue-100 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
             <div className="absolute left-20 w-[200px] h-[200px] bg-purple-100 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
