@@ -1,11 +1,11 @@
 {
   "name": "Alris",
   "short_name": "Alris",
-  "description": "Alris Voice Command Application",
+  "description": "Alris is a browser automation tool that allows you to control your browser with voice and text commands.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#2563eb",
+  "theme_color": "#ffffff",
   "orientation": "portrait-primary",
   "icons": [
     {
