@@ -73,7 +73,8 @@ const Hero = () => {
                 loop
                 muted
                 playsInline
-                // poster="/video/demo-poster.jpg"
+                preload="auto"
+                poster="/video/demo-poster.jpg"
               >
                 <source src="/video/alris-demo-2.mp4" type="video/mp4" />
                 Your browser does not support the video tag.
