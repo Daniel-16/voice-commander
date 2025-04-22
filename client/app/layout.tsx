@@ -5,7 +5,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Alris - Voice & Text Commands for Your Browser",
+  title: "Alris - AI Agent for your browser",
   description:
     "Control your browser naturally with voice and text commands. Alris makes browsing effortless with powerful automation capabilities.",
   manifest: "/manifest.json",
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
       { url: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png" },
     ],
   },
-  themeColor: "#2563eb",
+  themeColor: "#ffffff",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -46,7 +46,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Alris" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="theme-color" content="#2563eb" />
+        <meta name="theme-color" content="#ffffff" />
 
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
         <link
