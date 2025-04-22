@@ -1,8 +1,33 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
 
 const Hero = () => {
+  const [isVideoLoaded, setIsVideoLoaded] = useState(false);
+  const [shouldShowPlayButton, setShouldShowPlayButton] = useState(false);
+
+  useEffect(() => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    setShouldShowPlayButton(isIOS);
+  }, []);
+
+  const handlePlay = (event: React.SyntheticEvent<HTMLVideoElement>) => {
+    const video = event.currentTarget;
+    video.play().catch((error) => {
+      console.log("Video play failed:", error);
+      setShouldShowPlayButton(true);
+    });
+  };
+
+  const handleManualPlay = () => {
+    const video = document.querySelector("video");
+    if (video) {
+      video.play().catch(console.error);
+      setShouldShowPlayButton(false);
+    }
+  };
+
   return (
     <div className="relative min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-40 pb-16">
@@ -74,11 +99,33 @@ const Hero = () => {
                 muted
                 playsInline
                 poster="/video/demo-poster.jpg"
-                preload="auto"
+                preload="metadata"
+                onLoadedData={() => setIsVideoLoaded(true)}
+                onPlay={handlePlay}
               >
+                <source
+                  src="/video/alris-demo-2-mobile.mp4"
+                  type="video/mp4"
+                  media="(max-width: 768px)"
+                />
                 <source src="/video/alris-demo-2.mp4" type="video/mp4" />
                 Your browser does not support the video tag.
               </video>
+
+              {shouldShowPlayButton && (
+                <button
+                  onClick={handleManualPlay}
+                  className="absolute inset-0 w-full h-full flex items-center justify-center bg-black/50 hover:bg-black/40 transition-colors"
+                >
+                  <svg
+                    className="w-20 h-20 text-white"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </button>
+              )}
 
               <div className="absolute inset-0 bg-black/10 pointer-events-none"></div>
             </div>
