@@ -18,9 +18,9 @@ const features = [
       >
         <defs>
           <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#2563eb" />
-            <stop offset="50%" stopColor="#a855f7" />
-            <stop offset="100%" stopColor="#2563eb" />
+            <stop offset="0%" stopColor="#9333ea" />
+            <stop offset="50%" stopColor="#3b82f6" />
+            <stop offset="100%" stopColor="#9333ea" />
           </linearGradient>
         </defs>
         <path
@@ -46,9 +46,9 @@ const features = [
       >
         <defs>
           <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#2563eb" />
-            <stop offset="50%" stopColor="#a855f7" />
-            <stop offset="100%" stopColor="#2563eb" />
+            <stop offset="0%" stopColor="#9333ea" />
+            <stop offset="50%" stopColor="#3b82f6" />
+            <stop offset="100%" stopColor="#9333ea" />
           </linearGradient>
         </defs>
         <path
@@ -80,9 +80,9 @@ const features = [
       >
         <defs>
           <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#2563eb" />
-            <stop offset="50%" stopColor="#a855f7" />
-            <stop offset="100%" stopColor="#2563eb" />
+            <stop offset="0%" stopColor="#9333ea" />
+            <stop offset="50%" stopColor="#3b82f6" />
+            <stop offset="100%" stopColor="#9333ea" />
           </linearGradient>
         </defs>
         <path
@@ -114,17 +114,17 @@ const FeatureCard = ({
       initial={{ opacity: 0, y: 20 }}
       animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
       transition={{ duration: 0.6, delay: index * 0.2 }}
-      className="relative group p-6 bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300"
+      className="relative group p-6 bg-[#12121A] rounded-xl border border-purple-500/20 hover:border-purple-500/40 transition-all duration-300"
     >
-      <div className="absolute inset-0 bg-gradient-to-r from-blue-400 via-purple-500 to-blue-600 blur-lg opacity-0 group-hover:opacity-10 transition-opacity duration-300 rounded-xl"></div>
-      <div className="absolute top-6 left-6  rounded-lg p-3 text-white">
+      <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600 blur-lg opacity-0 group-hover:opacity-10 transition-opacity duration-300 rounded-xl"></div>
+      <div className="absolute top-6 left-6 rounded-lg p-3 text-white">
         {feature.icon}
       </div>
       <div className="ml-16">
-        <h3 className="text-xl font-semibold bg-gradient-to-r from-blue-600 via-purple-500 to-blue-600 bg-clip-text text-transparent">
+        <h3 className="text-xl font-semibold bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
           {feature.title}
         </h3>
-        <p className="mt-2 text-gray-600">{feature.description}</p>
+        <p className="mt-2 text-gray-400">{feature.description}</p>
       </div>
     </motion.div>
   );
@@ -137,8 +137,9 @@ const Features = () => {
   });
 
   return (
-    <section id="features" className="py-20 bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="features" className="py-20 bg-[#0A0A0F]">
+      <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <motion.div
           ref={ref}
           initial={{ opacity: 0, y: 20 }}
@@ -146,10 +147,10 @@ const Features = () => {
           transition={{ duration: 0.6 }}
           className="text-center"
         >
-          <h2 className="text-3xl font-extrabold sm:text-4xl bg-gradient-to-r from-blue-600 via-purple-500 to-blue-600 bg-clip-text text-transparent">
+          <h2 className="text-3xl font-extrabold sm:text-4xl bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
             Your Browser, Supercharged with AI
           </h2>
-          <p className="mt-4 max-w-2xl mx-auto text-xl text-gray-600">
+          <p className="mt-4 max-w-2xl mx-auto text-xl text-gray-400">
             Experience a smarter way to browse with features that make your
             digital life easier.
           </p>

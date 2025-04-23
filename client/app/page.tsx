@@ -8,7 +8,7 @@ import HowToUse from "./components/HowToUse";
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#0A0A0F]">
       <Navbar />
       <Hero />
       <ExampleCommands />
@@ -16,18 +16,18 @@ export default function LandingPage() {
       <HowToUse />
 
       {/* Footer */}
-      <footer className="bg-gray-50">
+      <footer className="bg-[#12121A]">
         <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
-              <h3 className="text-sm font-semibold text-gray-400 tracking-wider uppercase">
+              <h3 className="text-sm font-semibold text-gray-300 tracking-wider uppercase">
                 Product
               </h3>
               <ul className="mt-4 space-y-4">
                 <li>
                   <a
                     href="#features"
-                    className="text-base text-gray-500 hover:text-gray-900"
+                    className="text-base text-gray-400 hover:text-purple-400"
                   >
                     Features
                   </a>
@@ -35,7 +35,7 @@ export default function LandingPage() {
                 <li>
                   <a
                     href="#how-to-use"
-                    className="text-base text-gray-500 hover:text-gray-900"
+                    className="text-base text-gray-400 hover:text-purple-400"
                   >
                     How to Use
                   </a>
@@ -43,7 +43,7 @@ export default function LandingPage() {
                 <li>
                   <a
                     href="/chat"
-                    className="text-base text-gray-500 hover:text-gray-900"
+                    className="text-base text-gray-400 hover:text-purple-400"
                   >
                     Launch App
                   </a>
@@ -51,7 +51,7 @@ export default function LandingPage() {
               </ul>
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-gray-400 tracking-wider uppercase">
+              <h3 className="text-sm font-semibold text-gray-300 tracking-wider uppercase">
                 Support
               </h3>
               <ul className="mt-4 space-y-4">
@@ -60,7 +60,7 @@ export default function LandingPage() {
                     href="https://github.com/Daniel-16/alris"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-base text-gray-500 hover:text-gray-900"
+                    className="text-base text-gray-400 hover:text-purple-400"
                   >
                     Documentation
                   </a>
@@ -68,7 +68,7 @@ export default function LandingPage() {
                 <li>
                   <a
                     href="#"
-                    className="text-base text-gray-500 hover:text-gray-900"
+                    className="text-base text-gray-400 hover:text-purple-400"
                   >
                     FAQs
                   </a>
@@ -76,7 +76,7 @@ export default function LandingPage() {
                 <li>
                   <a
                     href="#"
-                    className="text-base text-gray-500 hover:text-gray-900"
+                    className="text-base text-gray-400 hover:text-purple-400"
                   >
                     Contact
                   </a>
@@ -84,14 +84,14 @@ export default function LandingPage() {
               </ul>
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-gray-400 tracking-wider uppercase">
+              <h3 className="text-sm font-semibold text-gray-300 tracking-wider uppercase">
                 Legal
               </h3>
               <ul className="mt-4 space-y-4">
                 <li>
                   <a
                     href="#"
-                    className="text-base text-gray-500 hover:text-gray-900"
+                    className="text-base text-gray-400 hover:text-purple-400"
                   >
                     Privacy Policy
                   </a>
@@ -99,7 +99,7 @@ export default function LandingPage() {
                 <li>
                   <a
                     href="#"
-                    className="text-base text-gray-500 hover:text-gray-900"
+                    className="text-base text-gray-400 hover:text-purple-400"
                   >
                     Terms of Service
                   </a>
@@ -107,7 +107,7 @@ export default function LandingPage() {
               </ul>
             </div>
           </div>
-          <div className="mt-8 border-t border-gray-200 pt-8">
+          <div className="mt-8 border-t border-gray-800 pt-8">
             <p className="text-base text-gray-400 text-center">
               &copy; {new Date().getFullYear()} Alris. All rights reserved.
             </p>

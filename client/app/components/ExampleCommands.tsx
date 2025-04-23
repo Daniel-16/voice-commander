@@ -39,14 +39,15 @@ const CommandCard = ({
       initial={{ opacity: 0, x: -20 }}
       animate={inView ? { opacity: 1, x: 0 } : { opacity: 0, x: -20 }}
       transition={{ duration: 0.6, delay: index * 0.2 }}
-      className="flex items-center space-x-4 p-6 bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 group cursor-pointer"
+      className="flex items-center space-x-4 p-6 bg-[#12121A] rounded-xl border border-purple-500/20 hover:border-purple-500/40 transition-all duration-300 group cursor-pointer relative overflow-hidden"
     >
-      <div className="text-4xl">{command.icon}</div>
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors duration-300">
+      <div className="absolute inset-0 bg-gradient-to-r from-purple-600/10 via-blue-500/10 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+      <div className="text-4xl relative z-10">{command.icon}</div>
+      <div className="relative z-10">
+        <h3 className="text-lg font-semibold text-white group-hover:text-purple-400 transition-colors duration-300">
           "{command.command}"
         </h3>
-        <p className="text-gray-600">{command.description}</p>
+        <p className="text-gray-400">{command.description}</p>
       </div>
     </motion.div>
   );
@@ -59,8 +60,9 @@ const ExampleCommands = () => {
   });
 
   return (
-    <section className="py-20 bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="py-20 bg-[#0A0A0F] relative">
+      <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <motion.div
           ref={ref}
           initial={{ opacity: 0, y: 20 }}
@@ -68,10 +70,10 @@ const ExampleCommands = () => {
           transition={{ duration: 0.6 }}
           className="text-center"
         >
-          <h2 className="text-3xl font-extrabold sm:text-4xl bg-gradient-to-r from-blue-600 via-purple-500 to-blue-600 bg-clip-text text-transparent">
+          <h2 className="text-3xl font-extrabold sm:text-4xl bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
             Just Ask and It's Done
           </h2>
-          <p className="mt-4 max-w-2xl mx-auto text-xl text-gray-600">
+          <p className="mt-4 max-w-2xl mx-auto text-xl text-gray-400">
             Here are some examples of what you can do with Alris
           </p>
         </motion.div>

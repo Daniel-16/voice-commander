@@ -33,8 +33,9 @@ const HowToUse = () => {
   });
 
   return (
-    <section id="how-to-use" className="py-20 bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="how-to-use" className="py-20 bg-[#0A0A0F] relative">
+      <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <motion.div
           ref={ref}
           initial={{ opacity: 0, y: 20 }}
@@ -42,10 +43,10 @@ const HowToUse = () => {
           transition={{ duration: 0.6 }}
           className="text-center"
         >
-          <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
+          <h2 className="text-3xl font-extrabold sm:text-4xl bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
             Start Using Alris in Seconds
           </h2>
-          <p className="mt-4 max-w-2xl mx-auto text-xl text-gray-600">
+          <p className="mt-4 max-w-2xl mx-auto text-xl text-gray-400">
             No installation needed. Just open and start commanding.
           </p>
         </motion.div>
@@ -63,8 +64,8 @@ const HowToUse = () => {
                   key={step.title}
                   className={`cursor-pointer transition-all duration-200 ${
                     activeStep === index
-                      ? "bg-blue-50 border-purple-500"
-                      : "hover:bg-gray-50"
+                      ? "bg-purple-900/20 border-purple-500"
+                      : "hover:bg-[#12121A] border-purple-500/20"
                   } p-6 rounded-lg border`}
                   onClick={() => setActiveStep(index)}
                 >
@@ -72,17 +73,17 @@ const HowToUse = () => {
                     <div
                       className={`flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full ${
                         activeStep === index
-                          ? "bg-gradient-to-r from-blue-600 to-purple-500"
-                          : "bg-gray-400"
+                          ? "bg-gradient-to-r from-purple-600 to-blue-500"
+                          : "bg-gray-700"
                       } text-white font-semibold`}
                     >
                       {index + 1}
                     </div>
-                    <h3 className="ml-4 text-lg font-medium text-gray-900">
+                    <h3 className="ml-4 text-lg font-medium text-white">
                       {step.title}
                     </h3>
                   </div>
-                  <p className="mt-2 ml-12 text-gray-600">{step.description}</p>
+                  <p className="mt-2 ml-12 text-gray-400">{step.description}</p>
                 </div>
               ))}
             </div>
@@ -95,8 +96,8 @@ const HowToUse = () => {
             className="mt-10 lg:mt-0"
           >
             <div className="relative">
-              <div className="relative rounded-lg bg-gray-900 p-6 overflow-hidden">
-                <div className="absolute top-0 left-0 right-0 h-8 bg-gray-800 flex items-center px-4">
+              <div className="relative rounded-lg bg-[#12121A] border border-purple-500/20 p-6 overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-8 bg-[#1A1A24] flex items-center px-4">
                   <div className="flex space-x-2">
                     <div className="w-3 h-3 rounded-full bg-red-500"></div>
                     <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
