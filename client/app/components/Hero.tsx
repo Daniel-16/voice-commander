@@ -28,7 +28,7 @@ const Hero = () => {
     {
       icon: <FaSpotify className="w-6 h-6 text-green-400" />,
       text: "Play Kendrick Lamar on Spotify",
-      description: "Control your favorite apps",
+      description: "Control Spotify playback with voice or text",
     },
   ];
 

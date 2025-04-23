@@ -12,7 +12,7 @@ const commands = [
   {
     command: "Play me a dog video",
     description: "Instantly find and play videos that match your interests",
-    icon: "🐕",
+    icon: "🎦",
   },
   {
     command: "Play Kendrick Lamar on Spotify",
