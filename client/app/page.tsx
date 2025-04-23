@@ -5,6 +5,7 @@ import Hero from "./components/Hero";
 import Features from "./components/Features";
 import ExampleCommands from "./components/ExampleCommands";
 import HowToUse from "./components/HowToUse";
+import LearnMore from "./components/LearnMore";
 
 export default function LandingPage() {
   return (
@@ -14,6 +15,7 @@ export default function LandingPage() {
       <ExampleCommands />
       <Features />
       <HowToUse />
+      <LearnMore />
 
       {/* Footer */}
       <footer className="bg-[#12121A]">

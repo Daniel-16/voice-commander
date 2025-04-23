@@ -68,13 +68,18 @@ const Hero = () => {
             transition={{ duration: 0.8, delay: 0.4 }}
             className="mt-5 max-w-md mx-auto sm:flex sm:justify-center md:mt-8"
           >
-            <div className="rounded-md">
-              <a href="/chat" className="relative group inline-block">
-                <span className="absolute inset-0 bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-                <span className="relative block px-8 py-3 md:py-4 md:text-lg md:px-10 rounded-lg border-2 border-transparent bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600 bg-[length:200%_auto] animate-gradient">
-                  <span className="text-white font-medium">Try Alris Now</span>
-                  <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600 opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
-                </span>
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <div className="rounded-md">
+                <a href="/chat" className="relative group inline-block">
+                  <span className="absolute inset-0 bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+                  <span className="relative block px-8 py-3 md:py-2 md:font-bold md:px-10 rounded-xl border-2 border-transparent bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600 bg-[length:200%_auto] animate-gradient">
+                    <span className="text-white font-medium">Try Alris</span>
+                    <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600 opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+                  </span>
+                </a>
+              </div>
+              <a href="#learn-more" className="px-6 py-2 rounded-lg border border-gray-700 bg-[#12121A] text-gray-400 hover:text-gray-300 hover:border-gray-600 transition-all duration-300">
+                Learn more →
               </a>
             </div>
           </motion.div>

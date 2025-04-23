@@ -47,13 +47,14 @@ const Navbar = () => {
             <div className="ml-10 flex items-center space-x-8">
               <NavLink href="#features">Features</NavLink>
               <NavLink href="#how-to-use">How to Use</NavLink>
+              {/* <NavLink href="#learn-more">Learn More</NavLink> */}
               <NavLink href="https://github.com/Daniel-16/alris">
                 Documentation
               </NavLink>
               <Link href="/chat" className="relative group inline-block">
                 <span className="absolute inset-0 bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-                <span className="relative block px-4 py-2 rounded-lg border-2 border-transparent bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600 bg-[length:200%_auto] animate-gradient">
-                  <span className="text-white font-medium">Launch App</span>
+                <span className="relative block px-4 py-2 rounded-xl border-2 border-transparent bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600 bg-[length:200%_auto] animate-gradient">
+                  <span className="text-white font-medium">Get Started</span>
                   <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600 opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
                 </span>
               </Link>
@@ -114,6 +115,12 @@ const Navbar = () => {
                 onClick={() => setIsOpen(false)}
               >
                 How to Use
+              </MobileNavLink>
+              <MobileNavLink
+                href="#learn-more"
+                onClick={() => setIsOpen(false)}
+              >
+                Learn More
               </MobileNavLink>
               <MobileNavLink
                 href="https://github.com/Daniel-16/alris"
