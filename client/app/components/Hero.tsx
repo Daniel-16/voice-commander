@@ -24,10 +24,10 @@ const Hero = () => {
             className="text-4xl tracking-tight font-extrabold sm:text-5xl md:text-6xl"
           >
             <span className="block text-gradient bg-gradient-to-r from-blue-600 via-purple-500 to-blue-600 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient">
-              Control Your Browser with
+              Your AI Browser Assistant
             </span>
             <span className="block text-gradient bg-gradient-to-r from-indigo-600 via-blue-500 to-indigo-600 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient animation-delay-2000">
-              Voice and Text Commands
+              That Gets Things Done
             </span>
           </motion.h1>
 
@@ -37,9 +37,9 @@ const Hero = () => {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="mt-3 max-w-md mx-auto text-base text-gray-500 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl"
           >
-            Experience the future of browser control with Alris. Use natural
-            language commands to navigate, search, and automate your browsing
-            experience.
+            Meet Alris, your intelligent browser companion. Schedule meetings,
+            play media, control apps, and more - all through natural language
+            commands. No extension needed.
           </motion.p>
 
           <motion.div

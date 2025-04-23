@@ -3,6 +3,7 @@
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import Features from "./components/Features";
+import ExampleCommands from "./components/ExampleCommands";
 import HowToUse from "./components/HowToUse";
 
 export default function LandingPage() {
@@ -10,6 +11,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-white">
       <Navbar />
       <Hero />
+      <ExampleCommands />
       <Features />
       <HowToUse />
 

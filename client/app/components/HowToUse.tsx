@@ -6,20 +6,22 @@ import { useInView } from "react-intersection-observer";
 
 const steps = [
   {
-    title: "Install Browser Extension",
+    title: "Open Alris",
     description:
-      "Install our browser extension from the Chrome Web Store to enable browser control capabilities.",
-    code: '# No installation command needed\nJust click "Add to Chrome" in the Web Store',
+      "Visit app.alris.ai in your browser. No installation or extension needed - it works instantly.",
+    code: "# Just visit\napp.alris.ai",
   },
   {
-    title: "Launch Alris",
-    description: "Open Alris and connect it to your browser extension.",
-    code: "# Connection happens automatically\nStatus: Connected to Browser Extension",
+    title: "Grant Permissions",
+    description:
+      "Allow necessary permissions for Alris to help with your tasks (microphone for voice commands, calendar for scheduling, etc).",
+    code: "# One-time setup\nPermissions requested:\n- Microphone (optional)\n- Calendar\n- Notifications",
   },
   {
-    title: "Start Commanding",
-    description: "Use voice or text commands to control your browser.",
-    code: '# Example commands:\n"Open github.com"\n"Search for weather forecast"\n"Go back to previous page"',
+    title: "Start Using",
+    description:
+      "Type or speak your commands naturally. Alris understands and executes them instantly.",
+    code: '# Example commands:\n"Schedule meeting with John"\n"Play dog videos"\n"Open Spotify and play Kendrick"',
   },
 ];
 
@@ -41,11 +43,10 @@ const HowToUse = () => {
           className="text-center"
         >
           <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
-            Get Started in Minutes
+            Start Using Alris in Seconds
           </h2>
           <p className="mt-4 max-w-2xl mx-auto text-xl text-gray-600">
-            Follow these simple steps to start controlling your browser with
-            Alris.
+            No installation needed. Just open and start commanding.
           </p>
         </motion.div>
 
@@ -70,7 +71,9 @@ const HowToUse = () => {
                   <div className="flex items-center">
                     <div
                       className={`flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full ${
-                        activeStep === index ? "bg-gradient-to-r from-blue-600 to-purple-500" : "bg-gray-400"
+                        activeStep === index
+                          ? "bg-gradient-to-r from-blue-600 to-purple-500"
+                          : "bg-gray-400"
                       } text-white font-semibold`}
                     >
                       {index + 1}
