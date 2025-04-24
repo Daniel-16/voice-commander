@@ -9,7 +9,7 @@ import LearnMore from "./components/LearnMore";
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#0A0A0F]">
+    <div className="min-h-screen bg-[#0A0A0F] overflow-x-hidden">
       <Navbar />
       <Hero />
       <ExampleCommands />
