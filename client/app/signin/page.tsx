@@ -2,15 +2,52 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { useState } from "react";
-import { FaGoogle, FaGithub } from "react-icons/fa";
+import { useState, useEffect } from "react";
+import { FaEye, FaEyeSlash, FaGoogle } from "react-icons/fa";
+import { useAuth } from "../utils/AuthContext";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function SignIn() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const { signIn, signInWithGoogle } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {    
+    const errorMessage = searchParams.get("error");
+    if (errorMessage) {
+      setError(decodeURIComponent(errorMessage));
+    }
+  }, [searchParams]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+    setIsLoading(true);
+
+    try {
+      await signIn(email, password);
+      router.push("/chat");
+    } catch (err: any) {
+      console.error("Sign in error:", err);
+      setError(err.message || "An error occurred during sign in");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError("");
+    try {
+      await signInWithGoogle();
+    } catch (err: any) {
+      console.error("Google sign in error:", err);
+      setError(err.message || "An error occurred during Google sign in");
+    }
   };
 
   return (
@@ -39,6 +76,12 @@ export default function SignIn() {
             <p className="text-gray-400 mt-2">Sign in to continue to Alris</p>
           </div>
 
+          {error && (
+            <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/50 text-red-500">
+              {error}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <input
@@ -46,20 +89,31 @@ export default function SignIn() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Email address"
-                className="w-full px-4 py-3 rounded-lg bg-[#1A1A23] border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300 relative"
+                className="w-full px-4 py-3 rounded-lg bg-[#1A1A23] border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300"
                 required
+                disabled={isLoading}
               />
             </div>
 
             <div>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
-                className="w-full px-4 py-3 rounded-lg bg-[#1A1A23] border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300 relative"
-                required
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
+                  className="w-full px-4 py-3 rounded-lg bg-[#1A1A23] border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300"
+                  required
+                  disabled={isLoading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 focus:outline-none"
+                >
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
             </div>
 
             <div className="flex items-center justify-between text-sm">
@@ -78,10 +132,14 @@ export default function SignIn() {
               </Link>
             </div>
 
-            <button type="submit" className="w-full relative group">
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full relative group"
+            >
               <span className="absolute inset-0 bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
               <span className="relative block px-8 py-3 md:py-3 md:font-medium md:px-10 rounded-xl border-2 border-transparent bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600 bg-[length:200%_auto] animate-gradient hover:cursor-pointer">
-                Sign In
+                {isLoading ? "Signing in..." : "Sign In"}
               </span>
             </button>
           </form>
@@ -92,14 +150,16 @@ export default function SignIn() {
                 <div className="w-full border-t border-gray-700"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-[#12121A] text-gray-400">
-                  Or
-                </span>
+                <span className="px-2 bg-[#12121A] text-gray-400">Or</span>
               </div>
             </div>
 
             <div className="mt-6 grid grid-cols-1 gap-4">
-              <button className="flex items-center justify-center px-4 py-2 border border-gray-700 rounded-lg hover:border-gray-600 bg-[#1A1A23] text-gray-400 hover:text-gray-300 transition-all duration-300 hover:cursor-pointer">
+              <button
+                onClick={handleGoogleSignIn}
+                disabled={isLoading}
+                className="flex items-center justify-center px-4 py-2 border border-gray-700 rounded-lg hover:border-gray-600 bg-[#1A1A23] text-gray-400 hover:text-gray-300 transition-all duration-300 hover:cursor-pointer"
+              >
                 <FaGoogle className="mr-2" />
                 Continue with Google
               </button>
