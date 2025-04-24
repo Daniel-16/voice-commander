@@ -2,12 +2,12 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { FaEye, FaEyeSlash, FaGoogle } from "react-icons/fa";
 import { useAuth } from "../utils/AuthContext";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function SignIn() {
+function SignInContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -208,5 +208,13 @@ export default function SignIn() {
         }
       `}</style>
     </div>
+  );
+}
+
+export default function SignIn() {
+  return (
+    <Suspense>
+      <SignInContent />
+    </Suspense>
   );
 }
