@@ -46,6 +46,7 @@ const Hero = () => {
             <span className="block text-gradient bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient">
               Your AI Browser Assistant
             </span>
+            
             <span className="block text-gradient bg-gradient-to-r from-blue-600 via-purple-500 to-blue-600 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient animation-delay-2000">
               Just Got Smarter
             </span>
