@@ -119,7 +119,7 @@ export default function SignUp() {
               </div>
             </div>
 
-            <div className="text-sm text-gray-400">
+            {/* <div className="text-sm text-gray-400">
               <label className="flex items-center">
                 <input
                   type="checkbox"
@@ -142,7 +142,7 @@ export default function SignUp() {
                   Privacy Policy
                 </Link>
               </label>
-            </div>
+            </div> */}
 
             <button
               type="submit"
