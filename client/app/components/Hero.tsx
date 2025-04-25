@@ -9,13 +9,8 @@ const Hero = () => {
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const handlePlay = (event: React.SyntheticEvent<HTMLVideoElement>) => {
+  const handlePlay = () => {
     setIsPlaying(true);
-    const video = event.currentTarget;
-    video.play().catch((error) => {
-      console.log("Video play failed:", error);
-      setIsPlaying(false);
-    });
   };
 
   const commandExamples = [
@@ -135,35 +130,35 @@ const Hero = () => {
           className="mt-16 relative"
         >
           <div className="relative mx-auto max-w-4xl rounded-2xl shadow-2xl overflow-hidden border border-purple-500/20">
-            <div
-              className="relative aspect-video bg-[#12121A] rounded-2xl group cursor-pointer"
-              onClick={() => document.querySelector("video")?.play()}
-            >
-              <video
-                className={`w-full h-full object-cover rounded-2xl transition-opacity duration-300 ${
-                  isPlaying ? "opacity-100" : "opacity-90"
-                }`}
-                loop
-                controls
-                playsInline
-                preload="metadata"
-                poster="/icons/icon.png"            
-                onLoadedData={() => setIsVideoLoaded(true)}
-                onPlay={handlePlay}
-              >
-                <source src="/video/alris-ai-agent.mp4" type="video/mp4" />
-                Your browser does not support the video tag.
-              </video>
+            <div className="relative aspect-video bg-[#12121A] rounded-2xl group">
               {!isPlaying && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-20 h-20 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center transition-transform group-hover:scale-110">
-                    <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center">
-                      <FaPlay className="w-8 h-8 text-[#0A0A0F] ml-1" />
+                <div
+                  className="absolute inset-0 flex items-center justify-center cursor-pointer z-10"
+                  onClick={handlePlay}
+                >                  
+                  <div 
+                    className="absolute inset-0 bg-cover bg-center"
+                    style={{ 
+                      backgroundImage: "url('/video/alris.jpeg')",
+                      filter: "brightness(0.8)"
+                    }}
+                  />                  
+                  <div className="relative z-20 w-24 h-24 bg-white/60 backdrop-blur-sm rounded-full flex items-center justify-center transition-transform group-hover:scale-110">
+                    <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center">
+                      <FaPlay className="w-8 h-8 text-[#ffffff] ml-1" />
                     </div>
                   </div>
                 </div>
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0F] via-transparent to-transparent opacity-50"></div>
+              {isPlaying && (
+                <iframe
+                  className="w-full h-full rounded-2xl"
+                  src="https://www.youtube.com/embed/xZNHoTB_f6g?autoplay=1"
+                  title="Alris AI Agent"
+                  allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              )}
             </div>
           </div>
         </motion.div>
