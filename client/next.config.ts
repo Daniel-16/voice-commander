@@ -3,6 +3,19 @@ import { NextConfig } from "next";
 
 const config: NextConfig = {
   reactStrictMode: true,
+  experimental: {
+    turbo: {
+      rules: {
+        "*.jpg": ["file-loader"],
+        "*.jpeg": ["file-loader"],
+        "*.gif": ["file-loader"],
+        "*.png": ["file-loader"],
+        "*.svg": ["file-loader"],
+        "*.ico": ["file-loader"],
+        "*.webp": ["file-loader"],
+      },
+    },
+  },
 };
 
 const withPWAConfig = withPWA({
