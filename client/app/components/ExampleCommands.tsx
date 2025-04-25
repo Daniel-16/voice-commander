@@ -15,7 +15,7 @@ const commands = [
     icon: "🎦",
   },
   {
-    command: "Play Kendrick Lamar on Spotify",
+    command: "Play Pop Music on Spotify",
     description: "Control your favorite music streaming services",
     icon: "🎵",
   },
