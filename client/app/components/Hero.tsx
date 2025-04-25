@@ -136,8 +136,7 @@ const Hero = () => {
         >
           <div className="relative mx-auto max-w-4xl rounded-2xl shadow-2xl overflow-hidden border border-purple-500/20">
             <div
-              className="relative aspect-video bg-[#12121A] rounded-2xl group cursor-pointer"
-              onClick={() => document.querySelector("video")?.play()}
+              className="relative aspect-video bg-[#12121A] rounded-2xl group"
             >
               <video
                 className={`w-full h-full object-cover rounded-2xl transition-opacity duration-300 ${
@@ -145,9 +144,11 @@ const Hero = () => {
                 }`}
                 loop
                 controls
+                muted = {false}
                 playsInline
+                data-webkit-playsinline="true"
                 preload="metadata"
-                poster="/icons/icon.png"            
+                // poster="/icons/icon.png"
                 onLoadedData={() => setIsVideoLoaded(true)}
                 onPlay={handlePlay}
               >
@@ -155,7 +156,16 @@ const Hero = () => {
                 Your browser does not support the video tag.
               </video>
               {!isPlaying && (
-                <div className="absolute inset-0 flex items-center justify-center">
+                <div 
+                  className="absolute inset-0 flex items-center justify-center cursor-pointer"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const video = e.currentTarget.parentElement?.querySelector('video');
+                    if (video) {
+                      video.play();
+                    }
+                  }}
+                >
                   <div className="w-20 h-20 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center transition-transform group-hover:scale-110">
                     <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center">
                       <FaPlay className="w-8 h-8 text-[#0A0A0F] ml-1" />
@@ -163,7 +173,7 @@ const Hero = () => {
                   </div>
                 </div>
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0F] via-transparent to-transparent opacity-50"></div>
+              <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-[#0A0A0F] via-transparent to-transparent opacity-50"></div>
             </div>
           </div>
         </motion.div>
