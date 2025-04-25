@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { FaSpotify, FaCalendar, FaPlay } from "react-icons/fa";
+// import { BackgroundBeams } from "./BackgroundBeams";
 
 const Hero = () => {
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
@@ -33,7 +34,8 @@ const Hero = () => {
   ];
 
   return (
-    <div className="relative min-h-screen bg-[#0A0A0F]">
+    <div className="relative min-h-screen bg-[#0A0A0F] overflow-hidden">
+      {/* <BackgroundBeams className="opacity-20" /> */}
       <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-40 pb-16 relative z-10">
         <div className="text-center">
@@ -46,7 +48,7 @@ const Hero = () => {
             <span className="block text-gradient bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient">
               Your AI Browser Assistant
             </span>
-            
+
             <span className="block text-gradient bg-gradient-to-r from-blue-600 via-purple-500 to-blue-600 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient animation-delay-2000">
               Just Got Smarter
             </span>
@@ -69,6 +71,11 @@ const Hero = () => {
             transition={{ duration: 0.8, delay: 0.4 }}
             className="mt-5 max-w-md mx-auto sm:flex sm:justify-center md:mt-8"
           >
+            <div className="absolute -z-10">
+              <div className="absolute right-0 w-[300px] h-[300px] bg-purple-900/30 rounded-full mix-blend-screen filter blur-3xl opacity-70 animate-blob"></div>
+              <div className="absolute left-20 w-[300px] h-[300px] bg-blue-900/30 rounded-full mix-blend-screen filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
+              <div className="absolute bottom-20 left-0 w-[300px] h-[300px] bg-purple-900/30 rounded-full mix-blend-screen filter blur-3xl opacity-70 animate-blob animation-delay-4000"></div>
+            </div>
             <div className="flex flex-col sm:flex-row items-center gap-4">
               <div className="rounded-md">
                 <a href="/chat" className="relative group inline-block">
@@ -79,7 +86,10 @@ const Hero = () => {
                   </span>
                 </a>
               </div>
-              <a href="#learn-more" className="px-6 py-2 rounded-lg border border-gray-700 bg-[#12121A] text-gray-400 hover:text-gray-300 hover:border-gray-600 transition-all duration-300">
+              <a
+                href="#learn-more"
+                className="px-6 py-2 rounded-lg border border-gray-700 bg-[#12121A] text-gray-400 hover:text-gray-300 hover:border-gray-600 transition-all duration-300"
+              >
                 Learn more →
               </a>
             </div>
@@ -144,12 +154,6 @@ const Hero = () => {
               </video>
               <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0F] via-transparent to-transparent opacity-50"></div>
             </div>
-          </div>
-
-          <div className="absolute -z-10">
-            <div className="absolute right-0 w-[300px] h-[300px] bg-purple-900/30 rounded-full mix-blend-screen filter blur-3xl opacity-70 animate-blob"></div>
-            <div className="absolute left-20 w-[300px] h-[300px] bg-blue-900/30 rounded-full mix-blend-screen filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
-            <div className="absolute bottom-20 left-0 w-[300px] h-[300px] bg-purple-900/30 rounded-full mix-blend-screen filter blur-3xl opacity-70 animate-blob animation-delay-4000"></div>
           </div>
         </motion.div>
       </div>
