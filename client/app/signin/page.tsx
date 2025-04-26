@@ -17,7 +17,7 @@ function SignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  useEffect(() => {    
+  useEffect(() => {
     const errorMessage = searchParams.get("error");
     if (errorMessage) {
       setError(decodeURIComponent(errorMessage));
@@ -89,7 +89,7 @@ function SignInContent() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Email address"
-                className="w-full px-4 py-3 rounded-lg bg-[#1A1A23] border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300"
+                className="w-full px-4 py-3 rounded-lg bg-[#1A1A23] border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 required
                 disabled={isLoading}
               />
@@ -102,14 +102,15 @@ function SignInContent() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Password"
-                  className="w-full px-4 py-3 rounded-lg bg-[#1A1A23] border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300"
+                  className="w-full px-4 py-3 rounded-lg bg-[#1A1A23] border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                   required
                   disabled={isLoading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 focus:outline-none"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isLoading}
                 >
                   {showPassword ? <FaEyeSlash /> : <FaEye />}
                 </button>
@@ -120,13 +121,17 @@ function SignInContent() {
               <label className="flex items-center text-gray-400">
                 <input
                   type="checkbox"
-                  className="mr-2 rounded border-gray-700 bg-[#1A1A23]"
+                  className="mr-2 rounded border-gray-700 bg-[#1A1A23] disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isLoading}
                 />
                 Remember me
               </label>
               <Link
                 href="/forgot-password"
-                className="text-purple-500 hover:text-purple-400"
+                className={`text-purple-500 hover:text-purple-400 ${
+                  isLoading ? "pointer-events-none opacity-50" : ""
+                }`}
+                tabIndex={isLoading ? -1 : 0}
               >
                 Forgot password?
               </Link>
@@ -135,7 +140,7 @@ function SignInContent() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full relative group"
+              className="w-full relative group disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="absolute inset-0 bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
               <span className="relative block px-8 py-3 md:py-3 md:font-medium md:px-10 rounded-xl border-2 border-transparent bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600 bg-[length:200%_auto] animate-gradient hover:cursor-pointer">
@@ -158,7 +163,7 @@ function SignInContent() {
               <button
                 onClick={handleGoogleSignIn}
                 disabled={isLoading}
-                className="flex items-center justify-center px-4 py-2 border border-gray-700 rounded-lg hover:border-gray-600 bg-[#1A1A23] text-gray-400 hover:text-gray-300 transition-all duration-300 hover:cursor-pointer"
+                className="flex items-center justify-center px-4 py-2 border border-gray-700 rounded-lg hover:border-gray-600 bg-[#1A1A23] text-gray-400 hover:text-gray-300 transition-all duration-300 hover:cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <FaGoogle className="mr-2" />
                 Continue with Google
@@ -170,7 +175,10 @@ function SignInContent() {
             Don't have an account?{" "}
             <Link
               href="/signup"
-              className="text-purple-500 hover:text-purple-400"
+              className={`text-purple-500 hover:text-purple-400 ${
+                isLoading ? "pointer-events-none opacity-50" : ""
+              }`}
+              tabIndex={isLoading ? -1 : 0}
             >
               Sign up
             </Link>

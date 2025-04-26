@@ -66,11 +66,9 @@ class AlrisAgent:
         self.chain = self.prompt | self.llm | self.parser
 
     async def process_command(self, command: str) -> Dict[str, Any]:
-        try:
-            # Get LLM response
+        try:            
             action_data = await self.chain.ainvoke({"input": command})
             
-            # Execute the action based on type
             if action_data["action_type"] == "browser":
                 browser_action = BrowserAction(**action_data["parameters"])
                 result = await self.browser.execute_action(browser_action)

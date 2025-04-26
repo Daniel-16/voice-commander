@@ -25,26 +25,22 @@ class BrowserController:
                 await self._page.goto(action.url)
                 await self._page.wait_for_load_state("networkidle")
 
-            if action.action == "play_video":
-                # Handle YouTube-specific actions
+            if action.action == "play_video":                
                 if "youtube.com" in action.url:
                     search_input = await self._page.wait_for_selector('input#search')
                     await search_input.fill(action.inputs.get("search", ""))
                     await search_input.press("Enter")
                     await self._page.wait_for_load_state("networkidle")
                     
-                    # Click the first video
                     await self._page.wait_for_selector("ytd-video-renderer")
                     await self._page.click("ytd-video-renderer")
 
             elif action.action == "fill_form":
-                # Handle form filling
                 for field, value in (action.inputs or {}).items():
                     selector = action.selectors.get(field) if action.selectors else f'input[name="{field}"]'
                     await self._page.fill(selector, value)
 
             elif action.action == "click":
-                # Handle click actions
                 selector = action.selectors.get("click") if action.selectors else action.parameters.get("selector")
                 if selector:
                     await self._page.click(selector)
