@@ -51,6 +51,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else if (event === "SIGNED_OUT") {
           router.refresh();
           router.push("/signin");
+        } else if (
+          event === "USER_UPDATED" &&
+          !session?.user.email_confirmed_at
+        ) {
+          router.refresh();
+          router.push("/auth/verify");
         }
       }
     );

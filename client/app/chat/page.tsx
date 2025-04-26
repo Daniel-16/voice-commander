@@ -72,14 +72,14 @@ export default function ChatPage() {
   return (
     <div className="relative min-h-screen bg-[#0A0A0F] text-white overflow-hidden">
       <ChatNavbar />
-      <BackgroundBeams className="opacity-20" />
       <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
+      {/* <BackgroundBeams className="opacity-20" /> */}
       <div className="absolute inset-0 flex flex-col max-w-6xl mx-auto px-4 py-8">
         <div className="absolute inset-0">
           <div className="absolute inset-0 opacity-50">
-            <div className="fixed top-0 -left-32 w-96 h-96 bg-purple-600/20 rounded-full mix-blend-screen filter blur-[64px] animate-blob animation-delay-2000"></div>
-            <div className="fixed bottom-0 -right-32 w-96 h-96 bg-blue-600/20 rounded-full mix-blend-screen filter blur-[64px] animate-blob"></div>
-            <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-600/20 rounded-full mix-blend-screen filter blur-[64px] animate-blob animation-delay-4000"></div>
+            <div className="fixed top-0 -left-20 w-96 h-96 bg-purple-900/30 rounded-full mix-blend-screen filter blur-[64px] animate-blob animation-delay-2000"></div>
+            <div className="fixed bottom-0 -right-0 w-96 h-96 bg-blue-900/30 rounded-full mix-blend-screen filter blur-[64px] animate-blob"></div>
+            <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-900/30 rounded-full mix-blend-screen filter blur-[64px] animate-blob animation-delay-4000"></div>
           </div>
         </div>
         <div className="flex-1 overflow-y-auto space-y-4 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent pr-4 mt-12">

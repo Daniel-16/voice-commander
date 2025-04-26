@@ -24,7 +24,7 @@ export default function SignUp() {
 
     try {
       await signUp(email, password, name);
-      router.push("/chat");
+      router.push("/auth/verify");
     } catch (err: any) {
       setError(err.message || "An error occurred during sign up");
     } finally {
@@ -80,7 +80,7 @@ export default function SignUp() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Full name"
-                className="w-full px-4 py-3 rounded-lg bg-[#1A1A23] border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300"
+                className="w-full px-4 py-3 rounded-lg bg-[#1A1A23] border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 required
                 disabled={isLoading}
               />
@@ -92,7 +92,7 @@ export default function SignUp() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Email address"
-                className="w-full px-4 py-3 rounded-lg bg-[#1A1A23] border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300"
+                className="w-full px-4 py-3 rounded-lg bg-[#1A1A23] border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 required
                 disabled={isLoading}
               />
@@ -105,20 +105,21 @@ export default function SignUp() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Password"
-                  className="w-full px-4 py-3 rounded-lg bg-[#1A1A23] border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300"
+                  className="w-full px-4 py-3 rounded-lg bg-[#1A1A23] border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                   required
                   disabled={isLoading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 focus:outline-none"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isLoading}
                 >
                   {showPassword ? <FaEyeSlash /> : <FaEye />}
                 </button>
               </div>
             </div>
-{/* 
+            {/* 
             <div className="text-sm text-gray-400 flex items-center justify-between">
               <label className="">
                 <input
@@ -149,7 +150,7 @@ export default function SignUp() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full relative group"
+              className="w-full relative group disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="absolute inset-0 bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
               <span className="relative block px-8 py-3 md:py-3 md:font-medium md:px-10 rounded-xl border-2 border-transparent bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600 bg-[length:200%_auto] animate-gradient hover:cursor-pointer">
@@ -172,7 +173,7 @@ export default function SignUp() {
               <button
                 onClick={handleGoogleSignIn}
                 disabled={isLoading}
-                className="flex items-center justify-center px-4 py-2 border border-gray-700 rounded-lg hover:border-gray-600 bg-[#1A1A23] text-gray-400 hover:text-gray-300 transition-all duration-300 hover:cursor-pointer"
+                className="flex items-center justify-center px-4 py-2 border border-gray-700 rounded-lg hover:border-gray-600 bg-[#1A1A23] text-gray-400 hover:text-gray-300 transition-all duration-300 hover:cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <FaGoogle className="mr-2" />
                 Continue with Google
@@ -189,7 +190,7 @@ export default function SignUp() {
               Sign in
             </Link>
           </p>
-          <p className="mt-8 text-center text-gray-400 text-xs">            
+          <p className="mt-8 text-center text-gray-400 text-xs">
             <Link
               href="/terms"
               className="text-purple-500 hover:text-purple-400"
@@ -205,7 +206,6 @@ export default function SignUp() {
             </Link>
           </p>
         </motion.div>
-        
       </div>
 
       <style jsx>{`
