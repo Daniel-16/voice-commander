@@ -118,29 +118,31 @@ export default function SignUp() {
                 </button>
               </div>
             </div>
-
-            {/* <div className="text-sm text-gray-400">
-              <label className="flex items-center">
+{/* 
+            <div className="text-sm text-gray-400 flex items-center justify-between">
+              <label className="">
                 <input
                   type="checkbox"
-                  className="mr-2 rounded border-gray-700 bg-[#1A1A23]"
+                  className="rounded border-gray-700 bg-[#1A1A23] shrink-0 mt-1"
                   required
                   disabled={isLoading}
                 />
-                I agree to the{" "}
-                <Link
-                  href="/terms"
-                  className="text-purple-500 hover:text-purple-400 ml-1 mr-1"
-                >
-                  Terms of Service
-                </Link>
-                and
-                <Link
-                  href="/privacy"
-                  className="text-purple-500 hover:text-purple-400 ml-1"
-                >
-                  Privacy Policy
-                </Link>
+                <span className="flex items-center flex-wrap gap-1">
+                  I agree to the
+                  <Link
+                    href="/terms"
+                    className="text-purple-500 hover:text-purple-400 whitespace-nowrap"
+                  >
+                    Terms of Service
+                  </Link>
+                  and
+                  <Link
+                    href="/privacy"
+                    className="text-purple-500 hover:text-purple-400 whitespace-nowrap"
+                  >
+                    Privacy Policy
+                  </Link>
+                </span>
               </label>
             </div> */}
 
@@ -187,7 +189,23 @@ export default function SignUp() {
               Sign in
             </Link>
           </p>
+          <p className="mt-8 text-center text-gray-400 text-xs">            
+            <Link
+              href="/terms"
+              className="text-purple-500 hover:text-purple-400"
+            >
+              Terms of use
+            </Link>
+            {" | "}
+            <Link
+              href="/privacy-policy"
+              className="text-purple-500 hover:text-purple-400"
+            >
+              Privacy Policy
+            </Link>
+          </p>
         </motion.div>
+        
       </div>
 
       <style jsx>{`

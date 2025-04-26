@@ -6,6 +6,7 @@ import Features from "./components/Features";
 import ExampleCommands from "./components/ExampleCommands";
 import HowToUse from "./components/HowToUse";
 import LearnMore from "./components/LearnMore";
+import Link from "next/link";
 
 export default function LandingPage() {
   return (
@@ -91,20 +92,20 @@ export default function LandingPage() {
               </h3>
               <ul className="mt-4 space-y-4">
                 <li>
-                  <a
-                    href="#"
+                  <Link
+                    href="/privacy-policy"
                     className="text-base text-gray-400 hover:text-purple-400"
                   >
                     Privacy Policy
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a
-                    href="#"
+                  <Link
+                    href="/terms"
                     className="text-base text-gray-400 hover:text-purple-400"
                   >
                     Terms of Service
-                  </a>
+                  </Link>
                 </li>
               </ul>
             </div>
