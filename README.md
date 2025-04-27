@@ -99,7 +99,7 @@ play video of cute puppies
 play music of The Beatles
 ```
 
-## Technical Stack
+<!-- ## Technical Stack
 
 ### Frontend (Client)
 
@@ -118,33 +118,9 @@ play music of The Beatles
 - Playwright
 - LangChain
 - Google Generative AI
-- WebSockets
+- WebSockets -->
 
-## Development
-
-### Running Tests
-
-```bash
-# Server tests
-cd server
-python -m pytest
-
-# Client tests
-cd client
-npm test
-```
-
-### Building for Production
-
-```bash
-# Build client
-cd client
-npm run build
-
-# Build server
-cd server
-python -m build
-```
+<!-- ## Development -->
 
 ## Security Features
 
