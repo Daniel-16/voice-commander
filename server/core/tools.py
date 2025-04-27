@@ -63,11 +63,9 @@ class BrowserTool(BaseTool):
 
     async def _arun(self, tool_input: Dict[str, Any]) -> str:
         try:
-            # Validate input against our schema
             action_input = BrowserActionInput(**tool_input)
             result = await self.browser.execute_action(action_input)
             
-            # Return in our expected format
             return {
                 "action_type": "browser",
                 "parameters": tool_input,
