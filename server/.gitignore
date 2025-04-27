@@ -34,3 +34,6 @@ build/
 
 # Browser automation
 .playwright/ 
+
+# # Configuration files
+# config/

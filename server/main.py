@@ -4,7 +4,7 @@ from core.agent import AlrisAgent
 from core.models import UserCommand
 import json
 
-app = FastAPI(title="Alris Backend")
+app = FastAPI(title="Alris Server")
 
 app.add_middleware(
     CORSMiddleware,
@@ -16,8 +16,15 @@ app.add_middleware(
 
 agent = AlrisAgent()
 
+@app.post("/command")
+async def process_command(command: UserCommand):
+    """REST endpoint for testing with Postman"""
+    response = await agent.process_command(command.command)
+    return response
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
+    """WebSocket endpoint for real-time communication"""
     await websocket.accept()
     try:
         while True:
@@ -31,4 +38,5 @@ async def websocket_endpoint(websocket: WebSocket):
 
 @app.get("/health")
 async def health_check():
+    """Health check endpoint"""
     return {"status": "healthy"} 
