@@ -1,6 +1,6 @@
 # Alris
 
-A powerful command system that allows users to control their browser through voice or text commands. The project consists of two main components:
+An intelligent AI agent that enables browser automation through natural language commands, powered by advanced language models. The project consists of two main components:
 
 **Author:** Daniel Toba  
 **Copyright:** © 2025 Daniel Toba  
