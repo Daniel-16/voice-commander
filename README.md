@@ -1,129 +1,181 @@
 # Alris
 
-A powerful command system that allows users to control their browser through voice or text commands. The project consists of three main components:
+A powerful command system that allows users to control their browser through voice or text commands. The project consists of two main components:
 
 **Author:** Daniel Toba  
 **Copyright:** © 2025 Daniel Toba  
 **License:** [Apache License 2.0](LICENSE)
 
-## Demo
+## Features
 
-Watch how Alris works in action:
+- Voice and text command input
+- Real-time browser automation
+- WebSocket-based communication
+- Modern React-based UI with Next.js
+- FastAPI backend with AI agent integration
+- Cross-browser compatibility
+- Secure and scalable architecture
 
-![Alris Demo](client/public/video/alris-demo.gif)
+## Prerequisites
 
-
-## Project Structure
-
-- `client/`: Next.js web application for the user interface
-- `extension/`: Chrome extension for browser control
-- `server/`: WebSocket server handling command processing
+- Python 3.x
+- Node.js 16+
+- npm or yarn
+- Virtual environment (recommended for Python)
 
 ## Quick Start
 
-1. Start the server:
+### Client Setup
 
-```bash
-cd server
-npm install
-npm run dev
-```
-
-2. Start the client:
+1. Navigate to client directory:
 
 ```bash
 cd client
+```
+
+2. Install dependencies:
+
+```bash
 npm install
+```
+
+3. Start the development server:
+
+```bash
 npm run dev
 ```
 
-3. Load the extension:
+The application will be available at `http://localhost:3000`
 
-- Open Chrome
-- Go to `chrome://extensions/`
-- Enable "Developer mode"
-- Click "Load unpacked"
-- Select the `extension` folder
+### Server Setup
 
-## Components Overview
+1. Navigate to server directory:
 
-### Client
+```bash
+cd server
+```
 
-A Next.js application that provides the user interface for sending commands and displaying responses. Connects to the server via WebSocket.
+2. Create and activate virtual environment:
 
-Features:
+```bash
+python -m venv myenv
+source myenv/bin/activate  # On Linux/Mac
+```
 
-- Voice command input
-- Text command input
-- Real-time response display
-- Command history
+3. Install dependencies:
 
-### Server
+```bash
+pip install -r requirements.txt
+```
 
-A Node.js WebSocket server that processes commands and communicates between the client and browser extension.
+4. Install Playwright browsers:
 
-Features:
+```bash
+playwright install
+```
 
-- Command processing
-- WebSocket communication
-- Error handling
-- Event logging
+5. Start the server:
 
-### Extension
+```bash
+python run.py
+```
 
-A Chrome extension that executes browser commands received from the server.
-
-Features:
-
-- Tab management
-- Navigation control
-- Bookmark handling
-- Browser actions
 
 ## Available Commands
 
 The following commands are currently supported:
 
-- `search [query]` - Performs a web search for the specified query
-- `open [url]` - Opens the specified URL in a new tab
-- `refresh` - Refreshes the current active tab
-- `play video of [query]` - Searches and plays a video matching the query
-- `play music of [query]` - Searches and plays music matching the query
+- `search [query]` - Performs a web search
+- `open [url]` - Opens specified URL
+- `play video of [query]` - Searches and plays videos
+- `play music of [query]` - Searches and plays music
 
 Examples:
 
-- `search weather in London` - Searches for current weather in London
-- `open github.com` - Opens GitHub in a new tab
-- `refresh` - Refreshes your current tab
-- `play video of cute puppies` - Searches and plays a video of cute puppies
-- `play music of The Beatles` - Searches and plays Beatles music
+```
+search weather in London
+open github.com
+play video of cute puppies
+play music of The Beatles
+```
+
+## Technical Stack
+
+### Frontend (Client)
+
+- Next.js 15.2
+- React 19
+- TypeScript
+- TailwindCSS
+- Framer Motion
+- Supabase Auth
+
+### Backend (Server)
+
+- FastAPI
+- Uvicorn
+- Pydantic
+- Playwright
+- LangChain
+- Google Generative AI
+- WebSockets
 
 ## Development
 
-### Prerequisites
-
-- Node.js 16+
-- Chrome browser
-- npm or yarn
-
-### Testing
+### Running Tests
 
 ```bash
+# Server tests
+cd server
+python -m pytest
+
+# Client tests
+cd client
 npm test
 ```
 
-### Building
+### Building for Production
 
 ```bash
+# Build client
+cd client
 npm run build
+
+# Build server
+cd server
+python -m build
 ```
+
+## Security Features
+
+- CORS protection
+- Input validation
+- Secure WebSocket communication
+- Authentication and authorization
+- Rate limiting
 
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
-3. Submit a pull request
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
 
 ## License
 
-Apache License 2.0
+Copyright (c) 2025 Daniel Toba
+
+This project is licensed under the Apache License, Version 2.0 - see http://www.apache.org/licenses/LICENSE-2.0 for details.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
