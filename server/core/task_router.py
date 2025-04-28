@@ -8,11 +8,22 @@ class TaskRouter:
     def __init__(self):
         self.api_patterns = [
             "search", "query", "fetch", "list", "get",
-            "create", "update", "delete", "api"
+            "create", "update", "delete", "api",
+            "add", "remove", "schedule", "send",
+            "retrieve", "generate", "save", "edit",
+            "upload", "download", "share", "sync",
+            "read", "write", "authorize", "validate",
+            "connect", "disconnect", "extract", "notify"
         ]
         self.web_patterns = [
             "open", "navigate", "click", "type", "fill",
-            "play", "pause", "browse", "scroll"
+            "play", "pause", "browse", "scroll",
+            "select", "drag", "drop", "hover",
+            "submit", "check", "uncheck", "load",
+            "view", "zoom", "capture", "focus",
+            "inspect", "highlight", "refresh", "reload",
+            "login", "logout", "download", "preview",
+            "interact", "watch", "bookmark", "search"
         ]
         
     def _is_api_task(self, task: Dict[str, Any]) -> bool:
