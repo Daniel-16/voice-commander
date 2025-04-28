@@ -48,7 +48,6 @@ class AlrisMCPServer:
     @property
     def tools(self):
         """Get list of available tools"""
-        # For synchronous access, we'll use the internal tool manager
         if hasattr(self.mcp, '_tool_manager'):
             return self.mcp._tool_manager._tools
         return {}
@@ -183,7 +182,6 @@ class AlrisMCPServer:
                                 else:
                                     content_list = result if isinstance(result, list) else []
 
-                                # Process each content item
                                 for content in content_list:
                                     if hasattr(content, "text"):
                                         serializable_result["result"]["content"].append({"text": content.text})
