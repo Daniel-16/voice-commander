@@ -1,13 +1,17 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from core.agent import AlrisAgent
 from core.models import UserCommand
-from alris_mcp.server import AlrisMCPServer  # Updated import
+from alris_mcp.server import AlrisMCPServer
 import json
 import logging
+import asyncio
+import threading
 
-# Configure logging
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -23,12 +27,14 @@ async def lifespan(app: FastAPI):
     """Lifespan context manager for FastAPI application"""
     logger.info("Starting FastAPI application")
     mcp_server = AlrisMCPServer()
-    await mcp_server.start()
+    # Run MCP server in a separate thread
+    mcp_thread = threading.Thread(target=mcp_server.run, daemon=True)
+    mcp_thread.start()
     app.state.mcp_server = mcp_server
+    app.state.mcp_thread = mcp_thread
     logger.info("MCP server started")
     yield
     logger.info("Shutting down FastAPI application")
-    await mcp_server.stop()
     logger.info("MCP server stopped")
 
 app = FastAPI(title="Alris Server", lifespan=lifespan)
