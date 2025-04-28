@@ -23,7 +23,8 @@ class TaskRouter:
             "view", "zoom", "capture", "focus",
             "inspect", "highlight", "refresh", "reload",
             "login", "logout", "download", "preview",
-            "interact", "watch", "bookmark", "search"
+            "interact", "watch", "bookmark", "search",
+            "video", "youtube", "stream", "watch_video"
         ]
         
     def _is_api_task(self, task: Dict[str, Any]) -> bool:
