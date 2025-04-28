@@ -1,12 +1,14 @@
 import os
-from typing import Dict, Any, List
+from typing import Dict, Any
 import logging
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
-from langchain_core.prompts import MessagesPlaceholder
-from langgraph.prebuilt.chat_agent_executor import create_react_agent, AgentState
+# from langchain_core.prompts import MessagesPlaceholder
+from langgraph.prebuilt.chat_agent_executor import create_react_agent
 from .tools import YouTubeSearchTool, WebNavigationTool
-from .models import ActionResponse
+from .models import ActionResponse, APITask, WebTask
+from .task_router import TaskRouter
+from .state_manager import StateManager
 from config.prompt import SYSTEM_PROMPT
 
 logger = logging.getLogger("alris_agent")
@@ -19,22 +21,29 @@ class AlrisAgent:
             temperature=0.1
         )
         
-        self.tools = [YouTubeSearchTool(), WebNavigationTool()]
+        # Initialize tools with categories
+        self.api_tools = []
+        self.web_tools = [YouTubeSearchTool(), WebNavigationTool()]
         
+        # Initialize task management
+        self.task_router = TaskRouter()
+        self.state_manager = StateManager()
+        
+        # Create agent executor with all tools
         self.agent_executor = create_react_agent(
             model=self.llm,
-            tools=self.tools,
+            tools=self.api_tools + self.web_tools,
             state_modifier=SystemMessage(content=SYSTEM_PROMPT)
         )
 
     async def process_command(self, command: str) -> Dict[str, Any]:
         logger.info(f"Processing command: {command}")
         try:
+            task_id = self.state_manager.create_task({"command": command})
+            
             result = await self.agent_executor.ainvoke({
                 "messages": [HumanMessage(content=command)]
             })
-            
-            logger.debug(f"Agent result: {result}")
             
             if isinstance(result, dict) and "messages" in result:
                 try:
@@ -51,29 +60,43 @@ class AlrisAgent:
                                 action_data = json.loads(json_match.group())
                                 logger.debug(f"Parsed action data: {action_data}")
                                 
-                                # Handle tool_code format and convert to browser action
-                                if action_data.get("action_type") == "tool_code" and action_data.get("parameters", {}).get("tool_name") == "default_api.youtube_search":
-                                    youtube_tool = YouTubeSearchTool()
-                                    query = action_data["parameters"]["tool_args"]["query"]
-                                    logger.info(f"Executing YouTube search: {query}")
-                                    result = await youtube_tool._arun({"query": query})
-                                    return result
+                                # Route the task
+                                routed_task = await self.task_router.route_task(action_data)
+                                if routed_task:
+                                    self.state_manager.update_task_state(
+                                        task_id,
+                                        status="routed",
+                                        context={"routed_task": routed_task}
+                                    )
+                                    
+                                    if routed_task["task_type"] == "api":
+                                        api_task = APITask(**routed_task)
+                                        pass
+                                    else:
+                                        # Handle web task
+                                        web_task = WebTask(**routed_task)
+                                        if web_task.action == "play_video" and "youtube.com" in web_task.url:
+                                            youtube_tool = YouTubeSearchTool()
+                                            query = web_task.parameters.get("search")
+                                            logger.info(f"Executing YouTube search: {query}")
+                                            result = await youtube_tool._arun({"query": query})
+                                            
+                                            self.state_manager.update_task_state(
+                                                task_id,
+                                                status="completed",
+                                                result=result
+                                            )
+                                            return result
                                 
-                                # Handle existing browser action format
-                                if "action_type" in action_data and "parameters" in action_data:
-                                    logger.info(f"Executing browser action: {action_data['action_type']}")
-                                    return action_data
-                                elif "parameters" in action_data:
-                                    response = {
-                                        "action_type": "browser",
-                                        "parameters": action_data["parameters"],
-                                        "status": "success",
-                                        "message": "Action completed"
-                                    }
-                                    logger.info(f"Converted to browser action: {response}")
-                                    return response
+                                return action_data
+                                
                             except json.JSONDecodeError as e:
                                 logger.error(f"JSON decode error: {e}", exc_info=True)
+                                self.state_manager.update_task_state(
+                                    task_id,
+                                    status="error",
+                                    error=str(e)
+                                )
                     
                     error_response = ActionResponse(
                         action_type="error",

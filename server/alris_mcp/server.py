@@ -1,6 +1,6 @@
 from typing import Optional, Dict, Any
 import sys
-import os
+# import os
 from pathlib import Path
 import logging
 import json
@@ -8,6 +8,8 @@ from fastapi import WebSocket
 from mcp.server.fastmcp import FastMCP
 from core.browser_controller import BrowserController
 from pydantic import BaseModel
+from core.state_manager import StateManager
+from core.models import APITask
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -42,6 +44,7 @@ class AlrisMCPServer:
         logger.info("Initializing AlrisMCPServer")
         self.mcp = FastMCP("Alris Browser Automation")
         self.browser_controller = BrowserController()
+        self.state_manager = StateManager()
         logger.debug("BrowserController initialized")
         self._register_tools()
 
@@ -118,6 +121,22 @@ class AlrisMCPServer:
                 "message": f"Failed to click element: {str(e)}"
             }
 
+    async def handle_api_task(self, task: APITask) -> Dict[str, Any]:
+        """Handle API-based tasks"""
+        logger.info(f"Handling API task: {task.endpoint}")
+        try:
+            return {
+                "status": "success",
+                "message": f"API task handled: {task.endpoint}",
+                "result": {}
+            }
+        except Exception as e:
+            logger.error(f"API task error: {str(e)}", exc_info=True)
+            return {
+                "status": "error",
+                "message": f"Failed to handle API task: {str(e)}"
+            }
+
     def _register_tools(self):
         """Register all MCP tools"""
         logger.info("Registering MCP tools")
@@ -141,6 +160,13 @@ class AlrisMCPServer:
         async def click_element(selector: str) -> Dict[str, Any]:
             """Click an element on the current page."""
             return await self.click_element(selector)
+
+        @self.mcp.tool()
+        async def execute_api_task(task: Dict[str, Any]) -> Dict[str, Any]:
+            """Execute an API task."""
+            api_task = APITask(**task)
+            return await self.handle_api_task(api_task)
+
         # Log tools
         if hasattr(self.mcp, '_tool_manager'):
             logger.info(f"MCP tools registered: {list(self.mcp._tool_manager._tools.keys())}")
@@ -163,12 +189,25 @@ class AlrisMCPServer:
                         tool_name = data.get("name")
                         parameters = data.get("parameters", {})
                         
+                        # Create task state
+                        task_id = self.state_manager.create_task({
+                            "tool": tool_name,
+                            "parameters": parameters
+                        })
+                        
                         tools = await self.mcp.list_tools()
                         available_tool_names = [tool.name for tool in tools]
                         
                         if tool_name in available_tool_names:
                             try:
                                 result = await self.mcp.call_tool(name=tool_name, arguments=parameters)
+                                
+                                # Update task state
+                                self.state_manager.update_task_state(
+                                    task_id,
+                                    status="completed",
+                                    result=result
+                                )
                                 
                                 serializable_result = {
                                     "status": "success",
@@ -197,6 +236,12 @@ class AlrisMCPServer:
                                 await websocket.send_json(serializable_result)
                             except Exception as e:
                                 logger.error(f"Tool execution error: {str(e)}", exc_info=True)
+                                # Update task state
+                                self.state_manager.update_task_state(
+                                    task_id,
+                                    status="error",
+                                    error=str(e)
+                                )
                                 await websocket.send_json({
                                     "status": "error",
                                     "message": str(e)
