@@ -1,6 +1,6 @@
 # Alris
 
-An intelligent AI agent that enables browser automation through natural language commands, powered by advanced language models. The project consists of two main components:
+An automation system that transforms natural language commands into seamless task execution. Alris enables you to automate workflows, manage tasks, and control applications through simple, natural language instructions.
 
 **Author:** Daniel Toba  
 **Copyright:** © 2025 Daniel Toba  
@@ -8,12 +8,14 @@ An intelligent AI agent that enables browser automation through natural language
 
 ## Features
 
-- Voice and text command input
-- Real-time browser automation
+- Natural language command processing
+- Task and workflow automation
+- Process scheduling and management
+- Real-time execution monitoring
 - WebSocket-based communication
 - Modern React-based UI with Next.js
-- FastAPI backend with AI agent integration
-- Cross-browser compatibility
+- FastAPI backend with automation engine
+- Cross-platform compatibility
 - Secure and scalable architecture
 
 ## Prerequisites
@@ -79,7 +81,6 @@ playwright install
 ```bash
 python run.py
 ```
-
 
 ## Available Commands
 
