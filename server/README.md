@@ -1,6 +1,6 @@
 # Alris Server
 
-A FastAPI-based server that provides browser automation and AI agent capabilities through both REST and WebSocket endpoints.
+A FastAPI-based server that powers Alris's automation engine, transforming natural language commands into executable tasks through both REST and WebSocket endpoints.
 
 ## Features
 

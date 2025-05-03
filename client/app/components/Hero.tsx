@@ -16,18 +16,18 @@ const Hero = () => {
   const commandExamples = [
     {
       icon: <FaCalendar className="w-6 h-6 text-purple-400" />,
-      text: "Schedule a meeting with John",
-      description: "Seamlessly manage your calendar",
+      text: "Schedule a team sync for next Tuesday",
+      description: "Automated calendar management",
     },
     {
       icon: <FaPlay className="w-6 h-6 text-blue-400" />,
-      text: "Play me a dog video",
-      description: "Quick access to web content",
+      text: "Create a weekly report from my data",
+      description: "Streamlined task automation",
     },
     {
       icon: <FaSpotify className="w-6 h-6 text-green-400" />,
-      text: "Play Not like us - Kendrick Lamar on Spotify",
-      description: "Control Spotify playback with voice or text",
+      text: "Set up a daily backup workflow",
+      description: "Effortless process automation",
     },
   ];
 
@@ -44,11 +44,11 @@ const Hero = () => {
             className="text-4xl tracking-tight font-extrabold sm:text-5xl md:text-6xl"
           >
             <span className="block text-gradient bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient">
-              Your AI Browser Assistant
+              Automation Made Natural
             </span>
 
             <span className="block text-gradient bg-gradient-to-r from-blue-600 via-purple-500 to-blue-600 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient animation-delay-2000">
-              Just Got Smarter
+              With Simple Commands
             </span>
           </motion.h1>
 
@@ -58,9 +58,9 @@ const Hero = () => {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="mt-3 max-w-md mx-auto text-base text-gray-400 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl"
           >
-            Experience the future of web browsing with Alris. No extensions
-            needed - just pure AI power in your browser. Control your apps,
-            schedule meetings, and find content with natural language.
+            Transform your workflow with Alris - where natural language commands
+            become seamless automated actions. Simply tell Alris what you need,
+            and watch as your tasks are executed with precision and efficiency.
           </motion.p>
 
           <motion.div
@@ -79,7 +79,9 @@ const Hero = () => {
                 <a href="/chat" className="relative group inline-block">
                   <span className="absolute inset-0 bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
                   <span className="relative block px-8 py-3 md:py-2 md:font-bold md:px-10 rounded-xl border-2 border-transparent bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600 bg-[length:200%_auto] animate-gradient">
-                    <span className="text-white font-medium">Try Alris Now</span>
+                    <span className="text-white font-medium">
+                      Try Alris Now
+                    </span>
                     <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600 opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
                   </span>
                 </a>
@@ -135,14 +137,14 @@ const Hero = () => {
                 <div
                   className="absolute inset-0 flex items-center justify-center cursor-pointer z-10"
                   onClick={handlePlay}
-                >                  
-                  <div 
+                >
+                  <div
                     className="absolute inset-0 bg-cover bg-center"
-                    style={{ 
+                    style={{
                       backgroundImage: "url('/video/alris.jpeg')",
-                      filter: "brightness(0.8)"
+                      filter: "brightness(0.8)",
                     }}
-                  />                  
+                  />
                   <div className="relative z-20 w-24 h-24 bg-white/60 backdrop-blur-sm rounded-full flex items-center justify-center transition-transform group-hover:scale-110">
                     <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center">
                       <FaPlay className="w-8 h-8 text-[#ffffff] ml-1" />
