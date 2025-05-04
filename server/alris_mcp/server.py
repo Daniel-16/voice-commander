@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import sys
 # import os
 from pathlib import Path
@@ -10,6 +10,8 @@ from core.browser_controller import BrowserController
 from pydantic import BaseModel
 from core.state_manager import StateManager
 from core.models import APITask
+from core.agents import CalendarAgent, BrowserAgent, TaskAgent
+from langchain.schema.messages import HumanMessage
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -39,13 +41,26 @@ class FormParams(BaseModel):
 class ClickParams(BaseModel):
     selector: str
 
+class TaskIntent(BaseModel):
+    intent_type: str
+    parameters: Dict[str, Any]
+    sub_tasks: List[Dict[str, Any]]
+
 class AlrisMCPServer:
     def __init__(self):
         logger.info("Initializing AlrisMCPServer")
-        self.mcp = FastMCP("Alris Browser Automation")
-        self.browser_controller = BrowserController()
+        self.mcp = FastMCP("Alris Command Orchestrator")
         self.state_manager = StateManager()
-        logger.debug("BrowserController initialized")
+        
+        # Initialize specialized agents
+        self.task_agent = TaskAgent()
+        self.calendar_agent = CalendarAgent()
+        self.browser_agent = BrowserAgent()
+        
+        # Initialize tools after agents
+        self.browser_controller = BrowserController()
+        
+        logger.debug("MCP Server and agents initialized")
         self._register_tools()
 
     @property
@@ -137,37 +152,144 @@ class AlrisMCPServer:
                 "message": f"Failed to handle API task: {str(e)}"
             }
 
+    async def process_command(self, command: str) -> Dict[str, Any]:
+        """Process user command through MCP orchestration"""
+        logger.info(f"Processing command through MCP: {command}")
+        task_id = None
+        try:
+            task_id = self.state_manager.create_task({"command": command})
+            
+            # formatted_command = HumanMessage(content=command)
+            
+            intent_result = await self.task_agent.analyze_intent(command)
+            self.state_manager.update_task_state(
+                task_id, 
+                status="intent_analyzed",
+                context={"intent": intent_result}
+            )
+            
+            sub_tasks = await self.task_agent.decompose_task(intent_result)
+            self.state_manager.update_task_state(
+                task_id,
+                status="tasks_decomposed",
+                context={"sub_tasks": sub_tasks}
+            )
+            
+            results = []
+            for task in sub_tasks:
+                try:
+                    result = await self._delegate_task(task)
+                    results.append(result)
+                    if isinstance(result.get("message"), str):
+                        self.task_agent.memory.chat_memory.add_ai_message(result["message"])
+                except Exception as e:
+                    logger.error(f"Task execution error: {e}", exc_info=True)
+                    error_result = {
+                        "status": "error",
+                        "message": f"Task execution failed: {str(e)}",
+                        "task": task
+                    }
+                    results.append(error_result)
+                    self.task_agent.memory.chat_memory.add_ai_message(f"Error: {str(e)}")
+            
+            final_response = await self.task_agent.aggregate_results(results)
+            
+            self.state_manager.update_task_state(
+                task_id,
+                status="completed",
+                result=final_response
+            )
+            
+            return {
+                "task_id": task_id,
+                "status": "success",
+                "intent": intent_result,
+                "response": final_response
+            }
+            
+        except Exception as e:
+            logger.error(f"Command processing error: {str(e)}", exc_info=True)
+            if task_id:
+                self.state_manager.update_task_state(
+                    task_id,
+                    status="error",
+                    error=str(e)
+                )
+            return {
+                "status": "error",
+                "message": f"Failed to process command: {str(e)}"
+            }
+
+    async def _delegate_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
+        """Delegate task to appropriate agent based on intent"""
+        intent_type = task.get("intent_type")
+        logger.info(f"Delegating task of type {intent_type}")
+        
+        try:
+            if intent_type == "calendar":
+                return await self.calendar_agent.execute_task(task)
+            elif intent_type == "browser":
+                return await self.browser_agent.execute_task(task)
+            elif intent_type == "api":
+                return await self.handle_api_task(APITask(**task))
+            else:
+                raise ValueError(f"Unknown intent type: {intent_type}")
+        except Exception as e:
+            logger.error(f"Task delegation error: {e}", exc_info=True)
+            raise
+
     def _register_tools(self):
-        """Register all MCP tools"""
+        """Register MCP tools for external integrations"""
         logger.info("Registering MCP tools")
 
         @self.mcp.tool()
-        async def navigate(url: str) -> Dict[str, Any]:
+        async def process_command(command: str) -> Dict[str, Any]:
+            """Process a user command through MCP orchestration"""
+            return await self.process_command(command)
+
+        @self.mcp.tool()
+        async def get_task_status(task_id: str) -> Dict[str, Any]:
+            """Get status of a specific task"""
+            state = self.state_manager.get_task_state(task_id)
+            return state.model_dump() if state else {"status": "not_found"}
+
+        @self.mcp.tool()
+        async def navigate(params: NavigateParams) -> Dict[str, Any]:
             """Navigate to a specified URL in the browser."""
-            return await self.navigate(url)
+            return await self.browser_agent.execute_task({
+                "intent_type": "browser",
+                "action": "navigate",
+                "parameters": params.model_dump()
+            })
 
         @self.mcp.tool()
-        async def play_youtube_video(search_query: str) -> Dict[str, Any]:
+        async def play_youtube_video(params: YouTubeSearchParams) -> Dict[str, Any]:
             """Search and play a YouTube video."""
-            return await self.play_youtube_video(search_query)
+            return await self.browser_agent.execute_task({
+                "intent_type": "browser",
+                "action": "play_video",
+                "parameters": params.model_dump()
+            })
 
         @self.mcp.tool()
-        async def fill_form(form_data: Dict[str, str], selectors: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+        async def fill_form(params: FormParams) -> Dict[str, Any]:
             """Fill form fields in the current page."""
-            return await self.fill_form(form_data, selectors)
+            return await self.browser_agent.execute_task({
+                "intent_type": "browser",
+                "action": "fill_form",
+                "parameters": params.model_dump()
+            })
 
         @self.mcp.tool()
-        async def click_element(selector: str) -> Dict[str, Any]:
+        async def click_element(params: ClickParams) -> Dict[str, Any]:
             """Click an element on the current page."""
-            return await self.click_element(selector)
+            return await self.browser_agent.execute_task({
+                "intent_type": "browser",
+                "action": "click",
+                "parameters": params.model_dump()
+            })
 
-        @self.mcp.tool()
-        async def execute_api_task(task: Dict[str, Any]) -> Dict[str, Any]:
-            """Execute an API task."""
-            api_task = APITask(**task)
-            return await self.handle_api_task(api_task)
-
-        # Log tools
+        # Log registered tools
         if hasattr(self.mcp, '_tool_manager'):
             logger.info(f"MCP tools registered: {list(self.mcp._tool_manager._tools.keys())}")
         else:
@@ -175,111 +297,51 @@ class AlrisMCPServer:
 
     async def handle_websocket(self, websocket: WebSocket):
         """Handle WebSocket connections and messages"""
-        await websocket.accept()
-        logger.info("WebSocket connection accepted")
+        logger.info("MCP WebSocket connection accepted")
         
         try:
             while True:
                 message = await websocket.receive_text()
-                logger.debug(f"Received WebSocket message: {message}")
+                logger.debug(f"Received MCP WebSocket message: {message}")
                 
                 try:
                     data = json.loads(message)
-                    if data.get("type") == "tool":
-                        tool_name = data.get("name")
-                        parameters = data.get("parameters", {})
-                        
-                        # Create task state
-                        task_id = self.state_manager.create_task({
-                            "tool": tool_name,
-                            "parameters": parameters
-                        })
-                        
-                        tools = await self.mcp.list_tools()
-                        available_tool_names = [tool.name for tool in tools]
-                        
-                        if tool_name in available_tool_names:
-                            try:
-                                result = await self.mcp.call_tool(name=tool_name, arguments=parameters)
-                                
-                                # Update task state
-                                self.state_manager.update_task_state(
-                                    task_id,
-                                    status="completed",
-                                    result=result
-                                )
-                                
-                                serializable_result = {
-                                    "status": "success",
-                                    "result": {
-                                        "content": []
-                                    }
-                                }
-
-                                if isinstance(result, dict):
-                                    content_list = result.get("content", [])
-                                else:
-                                    content_list = result if isinstance(result, list) else []
-
-                                for content in content_list:
-                                    if hasattr(content, "text"):
-                                        serializable_result["result"]["content"].append({"text": content.text})
-                                    elif isinstance(content, dict) and "text" in content:
-                                        serializable_result["result"]["content"].append({"text": content["text"]})
-                                    else:
-                                        try:
-                                            json.dumps(content)
-                                            serializable_result["result"]["content"].append(content)
-                                        except (TypeError, ValueError):
-                                            serializable_result["result"]["content"].append({"text": str(content)})
-                                
-                                await websocket.send_json(serializable_result)
-                            except Exception as e:
-                                logger.error(f"Tool execution error: {str(e)}", exc_info=True)
-                                # Update task state
-                                self.state_manager.update_task_state(
-                                    task_id,
-                                    status="error",
-                                    error=str(e)
-                                )
-                                await websocket.send_json({
-                                    "status": "error",
-                                    "message": str(e)
-                                })
-                        else:
-                            await websocket.send_json({
-                                "status": "error",
-                                "message": f"Unknown tool: {tool_name}. Available tools: {available_tool_names}"
-                            })
+                    command = data.get("command")
+                    
+                    if command:
+                        response = await self.process_command(command)
+                        await websocket.send_text(json.dumps({
+                            "type": "mcp_response",
+                            "data": response
+                        }))
                     else:
-                        await websocket.send_json({
-                            "status": "error",
-                            "message": "Invalid message format"
-                        })
+                        await websocket.send_text(json.dumps({
+                            "type": "error",
+                            "message": "Invalid message format: command is required"
+                        }))
                         
                 except json.JSONDecodeError:
-                    await websocket.send_json({
-                        "status": "error",
-                        "message": "Invalid JSON message"
-                    })
+                    await websocket.send_text(json.dumps({
+                        "type": "error",
+                        "message": "Invalid JSON format"
+                    }))
                 except Exception as e:
-                    logger.error(f"Error processing message: {str(e)}", exc_info=True)
-                    await websocket.send_json({
-                        "status": "error",
-                        "message": str(e)
-                    })
+                    logger.error(f"Error processing MCP message: {e}", exc_info=True)
+                    await websocket.send_text(json.dumps({
+                        "type": "error",
+                        "message": f"Failed to process MCP command: {str(e)}"
+                    }))
                     
         except Exception as e:
-            logger.error(f"WebSocket error: {str(e)}", exc_info=True)
+            logger.error(f"MCP WebSocket error: {e}", exc_info=True)
         finally:
             await websocket.close()
-            logger.info("WebSocket connection closed")
 
     def run(self):
         """Run the MCP server"""
-        logger.info("Starting MCP server with stdio transport")
+        logger.info("Starting MCP server")
         try:
             self.mcp.run()
         except Exception as e:
-            logger.error(f"Server failed: {e}", exc_info=True)
+            logger.error(f"MCP server error: {e}", exc_info=True)
             raise
