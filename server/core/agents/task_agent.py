@@ -1,7 +1,6 @@
 from typing import Dict, Any, List
 from langchain.agents import Tool, AgentExecutor
 from langchain.agents import create_structured_chat_agent
-from langchain.tools import BaseTool
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.schema import SystemMessage
 from . import BaseAgent
@@ -73,17 +72,15 @@ class TaskAgent(BaseAgent):
             {
                 "input": f"Analyze the intent of this command: {command}",
                 "chat_history": self.memory.chat_memory.messages if self.memory.chat_memory.messages else [],
-                "agent_scratchpad": [],  # Initialize as empty list for messages
-                "tools": self.tools,  # Add tools
-                "tool_names": [tool.name for tool in self.tools]  # Add tool names
+                "agent_scratchpad": [],
+                "tools": self.tools,
+                "tool_names": [tool.name for tool in self.tools]
             }
         )
         
-        # Parse the result into a structured format
         intent_type = self._determine_intent_type(command, str(result.get("output", "")))
         parameters = self._extract_parameters(command, str(result.get("output", "")))
         
-        # Save the interaction in memory
         await self.memory.chat_memory.add_user_message(command)
         await self.memory.chat_memory.add_ai_message(str(result.get("output", "")))
         
@@ -103,7 +100,6 @@ class TaskAgent(BaseAgent):
             }
         )
         
-        # Convert the agent's response into structured subtasks
         return self._parse_subtasks(str(result.get("output", "")), task_intent)
 
     async def aggregate_results(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -132,7 +128,7 @@ class TaskAgent(BaseAgent):
         elif intent_type == "browser":
             return self._decompose_browser_task(task)
         else:
-            return [task]  # Return as single task if no decomposition needed
+            return [task]
 
     def _determine_intent_type(self, command: str, analysis_result: str) -> str:
         """Determine the type of intent from analysis result"""
@@ -144,8 +140,6 @@ class TaskAgent(BaseAgent):
 
     def _extract_parameters(self, command: str, analysis_result: str) -> Dict[str, Any]:
         """Extract parameters from the command and analysis"""
-        # This would use NLP to extract relevant parameters
-        # For now, using a simple implementation
         params = {}
         
         if "tomorrow" in command.lower():
@@ -164,7 +158,7 @@ class TaskAgent(BaseAgent):
         elif intent_type == "browser":
             return self._decompose_browser_task(task_intent)
         
-        return [task_intent]  # Return original task if no decomposition needed
+        return [task_intent]
 
     def _decompose_calendar_task(self, task: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Decompose a calendar-related task"""

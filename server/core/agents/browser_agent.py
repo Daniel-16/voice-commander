@@ -1,4 +1,4 @@
-from typing import Dict, Any, List
+from typing import Dict, Any
 from langchain.agents import Tool, AgentExecutor
 from langchain.agents import create_structured_chat_agent
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -66,9 +66,9 @@ class BrowserAgent(BaseAgent):
                 {
                     "input": str(task),
                     "chat_history": self.memory.chat_memory.messages if self.memory.chat_memory.messages else [],
-                    "agent_scratchpad": [],  # Initialize as empty list for messages
-                    "tools": self.tools,  # Add tools
-                    "tool_names": [tool.name for tool in self.tools]  # Add tool names
+                    "agent_scratchpad": [],
+                    "tools": self.tools,
+                    "tool_names": [tool.name for tool in self.tools]
                 }
             )
             

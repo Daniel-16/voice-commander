@@ -1,4 +1,4 @@
-from typing import Dict, Any, List
+from typing import Dict, Any
 from datetime import datetime, timedelta
 from langchain.agents import Tool, AgentExecutor
 from langchain.agents import create_structured_chat_agent
@@ -62,9 +62,9 @@ class CalendarAgent(BaseAgent):
                 {
                     "input": str(task),
                     "chat_history": self.memory.chat_memory.messages if self.memory.chat_memory.messages else [],
-                    "agent_scratchpad": [],  # Initialize as empty list for messages
-                    "tools": self.tools,  # Add tools
-                    "tool_names": [tool.name for tool in self.tools]  # Add tool names
+                    "agent_scratchpad": [],
+                    "tools": self.tools,
+                    "tool_names": [tool.name for tool in self.tools]
                 }
             )
             
@@ -89,17 +89,14 @@ class CalendarAgent(BaseAgent):
     async def _validate_datetime(self, parameters: Dict[str, Any]) -> Dict[str, Any]:
         """Validate date and time parameters"""
         try:
-            # Parse the datetime
             event_time = await self._parse_datetime(parameters.get("date", ""))
             
-            # Validate it's not in the past
             if event_time < datetime.now():
                 return {
                     "status": "error",
                     "message": "Cannot schedule events in the past"
                 }
             
-            # Validate it's within reasonable future (e.g., 1 year)
             if event_time > datetime.now() + timedelta(days=365):
                 return {
                     "status": "error",
@@ -119,7 +116,6 @@ class CalendarAgent(BaseAgent):
     async def _create_event(self, parameters: Dict[str, Any]) -> Dict[str, Any]:
         """Create a calendar event"""
         try:
-            # In a real implementation, this would integrate with Google Calendar or similar
             event_time = await self._parse_datetime(parameters.get("date", ""))
             
             event = {
@@ -128,8 +124,6 @@ class CalendarAgent(BaseAgent):
                 "platform": parameters.get("platform", "zoom"),
                 "participants": parameters.get("participants", [])
             }
-            
-            # Here you would actually create the event in the calendar system
             
             return {
                 "status": "success",
@@ -145,14 +139,11 @@ class CalendarAgent(BaseAgent):
     async def _parse_datetime(self, datetime_str: str) -> datetime:
         """Parse datetime from natural language"""
         try:
-            # This is a simplified implementation
-            # In a real system, you'd use a more sophisticated NLP approach
             if datetime_str.lower() == "tomorrow":
                 return datetime.now() + timedelta(days=1)
             elif datetime_str.lower() == "next week":
                 return datetime.now() + timedelta(days=7)
             else:
-                # Attempt to parse as ISO format
                 return datetime.fromisoformat(datetime_str)
         except Exception as e:
             raise ValueError(f"Could not parse datetime: {str(e)}") 
