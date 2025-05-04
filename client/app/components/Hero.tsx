@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { useState } from "react";
 import { FaRobot, FaCode, FaTerminal, FaPlay } from "react-icons/fa";
 
@@ -57,10 +58,8 @@ const Hero = () => {
             className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight"
           >
             <div className="block bg-clip-text text-transparent bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600 bg-[length:200%_auto] animate-gradient mt-2">
-            <span className="block">Your AI Assistant That</span>
-            <span>
-              Actually Gets Web Tasks Done
-            </span>
+              <span className="block">Your AI Assistant That</span>
+              <span>Actually Gets Web Tasks Done</span>
             </div>
           </motion.h1>
 
@@ -68,7 +67,7 @@ const Hero = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="mt-8 text-xl text-gray-300 max-w-2xl mx-auto"
+            className="mt-8 text-sm md:text-xl text-purple-200 max-w-2xl mx-auto"
           >
             Alris turns your voice or text commands into automated web actions.
             No more context switching, no more manual browsing - just tell Alris
@@ -81,12 +80,18 @@ const Hero = () => {
             transition={{ duration: 0.8, delay: 0.4 }}
             className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
           >
-            <a
+            <Link
               href="/chat"
-              className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-medium hover:from-purple-700 hover:to-blue-700 transition-all w-full sm:w-auto"
+              className="relative group inline-block w-full sm:w-auto"
             >
-              Start Automating Now →
-            </a>
+              <span className="absolute inset-0 bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+              <span className="relative block px-8 py-3 rounded-xl border-2 border-transparent bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600 bg-[length:200%_auto] animate-gradient">
+                <span className="text-white font-medium">
+                  Try Alris Now →
+                </span>
+                <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600 opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+              </span>
+            </Link>
             <a
               href="#learn-more"
               className="px-8 py-3 bg-white/10 text-white rounded-xl font-medium hover:bg-white/20 transition-all w-full sm:w-auto"
