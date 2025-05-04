@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from core.state_manager import StateManager
 from core.models import APITask
 from core.agents import CalendarAgent, BrowserAgent, TaskAgent
+from langchain.schema.messages import HumanMessage, AIMessage
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -49,13 +50,15 @@ class AlrisMCPServer:
     def __init__(self):
         logger.info("Initializing AlrisMCPServer")
         self.mcp = FastMCP("Alris Command Orchestrator")
-        self.browser_controller = BrowserController()
         self.state_manager = StateManager()
         
         # Initialize specialized agents
         self.task_agent = TaskAgent()
         self.calendar_agent = CalendarAgent()
         self.browser_agent = BrowserAgent()
+        
+        # Initialize tools after agents
+        self.browser_controller = BrowserController()
         
         logger.debug("MCP Server and agents initialized")
         self._register_tools()
@@ -151,30 +154,76 @@ class AlrisMCPServer:
 
     async def process_command(self, command: str) -> Dict[str, Any]:
         """Process user command through MCP orchestration"""
-        logger.info(f"Processing command: {command}")
+        logger.info(f"Processing command through MCP: {command}")
+        task_id = None
         try:
-            # 1. Task Analysis and Intent Recognition
-            task_intent = await self.task_agent.analyze_intent(command)
+            # Create task state
+            task_id = self.state_manager.create_task({"command": command})
+            
+            # Format the command as a HumanMessage
+            formatted_command = HumanMessage(content=command)
+            
+            # 1. Intent Analysis with properly formatted messages
+            intent_result = await self.task_agent.analyze_intent(command)
+            self.state_manager.update_task_state(
+                task_id, 
+                status="intent_analyzed",
+                context={"intent": intent_result}
+            )
             
             # 2. Task Decomposition
-            sub_tasks = await self.task_agent.decompose_task(task_intent)
+            sub_tasks = await self.task_agent.decompose_task(intent_result)
+            self.state_manager.update_task_state(
+                task_id,
+                status="tasks_decomposed",
+                context={"sub_tasks": sub_tasks}
+            )
             
-            # 3. Agent Selection and Task Delegation
+            # 3. Task Execution through appropriate agents
             results = []
             for task in sub_tasks:
-                result = await self._delegate_task(task)
-                results.append(result)
+                try:
+                    result = await self._delegate_task(task)
+                    results.append(result)
+                    # Add task result to chat history
+                    if isinstance(result.get("message"), str):
+                        self.task_agent.memory.chat_memory.add_ai_message(result["message"])
+                except Exception as e:
+                    logger.error(f"Task execution error: {e}", exc_info=True)
+                    error_result = {
+                        "status": "error",
+                        "message": f"Task execution failed: {str(e)}",
+                        "task": task
+                    }
+                    results.append(error_result)
+                    # Add error to chat history
+                    self.task_agent.memory.chat_memory.add_ai_message(f"Error: {str(e)}")
             
             # 4. Aggregate Results
             final_response = await self.task_agent.aggregate_results(results)
             
+            # Update final state
+            self.state_manager.update_task_state(
+                task_id,
+                status="completed",
+                result=final_response
+            )
+            
             return {
+                "task_id": task_id,
                 "status": "success",
-                "intent": task_intent.dict(),
+                "intent": intent_result,
                 "response": final_response
             }
+            
         except Exception as e:
             logger.error(f"Command processing error: {str(e)}", exc_info=True)
+            if task_id:
+                self.state_manager.update_task_state(
+                    task_id,
+                    status="error",
+                    error=str(e)
+                )
             return {
                 "status": "error",
                 "message": f"Failed to process command: {str(e)}"
@@ -183,13 +232,20 @@ class AlrisMCPServer:
     async def _delegate_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
         """Delegate task to appropriate agent based on intent"""
         intent_type = task.get("intent_type")
+        logger.info(f"Delegating task of type {intent_type}")
         
-        if intent_type == "calendar":
-            return await self.calendar_agent.execute_task(task)
-        elif intent_type == "browser":
-            return await self.browser_agent.execute_task(task)
-        else:
-            raise ValueError(f"Unknown intent type: {intent_type}")
+        try:
+            if intent_type == "calendar":
+                return await self.calendar_agent.execute_task(task)
+            elif intent_type == "browser":
+                return await self.browser_agent.execute_task(task)
+            elif intent_type == "api":
+                return await self.handle_api_task(APITask(**task))
+            else:
+                raise ValueError(f"Unknown intent type: {intent_type}")
+        except Exception as e:
+            logger.error(f"Task delegation error: {e}", exc_info=True)
+            raise
 
     def _register_tools(self):
         """Register MCP tools for external integrations"""
@@ -203,35 +259,46 @@ class AlrisMCPServer:
         @self.mcp.tool()
         async def get_task_status(task_id: str) -> Dict[str, Any]:
             """Get status of a specific task"""
-            return self.state_manager.get_task_status(task_id)
+            state = self.state_manager.get_task_state(task_id)
+            return state.model_dump() if state else {"status": "not_found"}
 
         @self.mcp.tool()
-        async def navigate(url: str) -> Dict[str, Any]:
+        async def navigate(params: NavigateParams) -> Dict[str, Any]:
             """Navigate to a specified URL in the browser."""
-            return await self.navigate(url)
+            return await self.browser_agent.execute_task({
+                "intent_type": "browser",
+                "action": "navigate",
+                "parameters": params.model_dump()
+            })
 
         @self.mcp.tool()
-        async def play_youtube_video(search_query: str) -> Dict[str, Any]:
+        async def play_youtube_video(params: YouTubeSearchParams) -> Dict[str, Any]:
             """Search and play a YouTube video."""
-            return await self.play_youtube_video(search_query)
+            return await self.browser_agent.execute_task({
+                "intent_type": "browser",
+                "action": "play_video",
+                "parameters": params.model_dump()
+            })
 
         @self.mcp.tool()
-        async def fill_form(form_data: Dict[str, str], selectors: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+        async def fill_form(params: FormParams) -> Dict[str, Any]:
             """Fill form fields in the current page."""
-            return await self.fill_form(form_data, selectors)
+            return await self.browser_agent.execute_task({
+                "intent_type": "browser",
+                "action": "fill_form",
+                "parameters": params.model_dump()
+            })
 
         @self.mcp.tool()
-        async def click_element(selector: str) -> Dict[str, Any]:
+        async def click_element(params: ClickParams) -> Dict[str, Any]:
             """Click an element on the current page."""
-            return await self.click_element(selector)
+            return await self.browser_agent.execute_task({
+                "intent_type": "browser",
+                "action": "click",
+                "parameters": params.model_dump()
+            })
 
-        @self.mcp.tool()
-        async def execute_api_task(task: Dict[str, Any]) -> Dict[str, Any]:
-            """Execute an API task."""
-            api_task = APITask(**task)
-            return await self.handle_api_task(api_task)
-
-        # Log tools
+        # Log registered tools
         if hasattr(self.mcp, '_tool_manager'):
             logger.info(f"MCP tools registered: {list(self.mcp._tool_manager._tools.keys())}")
         else:
@@ -239,12 +306,12 @@ class AlrisMCPServer:
 
     async def handle_websocket(self, websocket: WebSocket):
         """Handle WebSocket connections and messages"""
-        logger.info("WebSocket connection accepted")
+        logger.info("MCP WebSocket connection accepted")
         
         try:
             while True:
                 message = await websocket.receive_text()
-                logger.debug(f"Received WebSocket message: {message}")
+                logger.debug(f"Received MCP WebSocket message: {message}")
                 
                 try:
                     data = json.loads(message)
@@ -254,8 +321,7 @@ class AlrisMCPServer:
                         response = await self.process_command(command)
                         await websocket.send_text(json.dumps({
                             "type": "mcp_response",
-                            "data": response,
-                            "command": command
+                            "data": response
                         }))
                     else:
                         await websocket.send_text(json.dumps({

@@ -50,26 +50,48 @@ class BrowserAgent(BaseAgent):
             agent=agent,
             tools=self.tools,
             memory=self.memory,
-            verbose=True
+            verbose=True,
+            return_intermediate_steps=True,
+            handle_parsing_errors=True,
+            agent_kwargs={
+                "memory_prompts": [MessagesPlaceholder(variable_name="chat_history")],
+                "input_variables": ["input", "agent_scratchpad", "chat_history", "tools", "tool_names"]
+            }
         )
 
     async def execute_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
         """Execute a browser-related task"""
-        action = task.get("action")
-        parameters = task.get("parameters", {})
+        try:
+            result = await self.agent_executor.ainvoke(
+                {
+                    "input": str(task),
+                    "chat_history": self.memory.chat_memory.messages if self.memory.chat_memory.messages else [],
+                    "agent_scratchpad": [],  # Initialize as empty list for messages
+                    "tools": self.tools,  # Add tools
+                    "tool_names": [tool.name for tool in self.tools]  # Add tool names
+                }
+            )
+            
+            action = task.get("action")
+            parameters = task.get("parameters", {})
 
-        if action == "navigate":
-            return await self._navigate(parameters.get("url", ""))
-        elif action == "interact":
-            if "video" in parameters:
-                return await self._play_video(parameters.get("video", ""))
-            elif "click" in parameters:
-                return await self._click(parameters.get("selector", ""))
-        
-        return {
-            "status": "error",
-            "message": f"Unknown browser action: {action}"
-        }
+            if action == "navigate":
+                return await self._navigate(parameters.get("url", ""))
+            elif action == "interact":
+                if "video" in parameters:
+                    return await self._play_video(parameters.get("video", ""))
+                elif "click" in parameters:
+                    return await self._click(parameters.get("selector", ""))
+            
+            return {
+                "status": "error",
+                "message": f"Unknown browser action: {action}"
+            }
+        except Exception as e:
+            return {
+                "status": "error",
+                "message": f"Task execution failed: {str(e)}"
+            }
 
     async def _navigate(self, url: str) -> Dict[str, Any]:
         """Navigate to a URL"""

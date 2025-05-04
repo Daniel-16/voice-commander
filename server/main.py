@@ -4,7 +4,6 @@ load_dotenv()
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from core.agent import AlrisAgent
 from core.models import UserCommand
 from alris_mcp.server import AlrisMCPServer
 import json
@@ -46,8 +45,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-agent = AlrisAgent()
-
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     """Main WebSocket endpoint for all communication"""
@@ -63,27 +60,19 @@ async def websocket_endpoint(websocket: WebSocket):
             try:
                 # Parse the message
                 data = json.loads(message)
-                message_type = data.get("type", "command")  # Default to command type
+                command = data.get("command")
                 
-                if message_type == "mcp":
-                    # Handle MCP-specific messages
-                    await app.state.mcp_server.handle_websocket(websocket)
-                else:
-                    # Handle regular commands
-                    command = data.get("command")
-                    if not command:
-                        raise ValueError("Command is required for type 'command'")
-                    
-                    # Process the command
-                    command_obj = UserCommand(command=command)
-                    response = await agent.process_command(command_obj.command)
-                    
-                    # Send response
-                    await websocket.send_text(json.dumps({
-                        "type": "response",
-                        "data": response,
-                        "command": command
-                    }))
+                if not command:
+                    raise ValueError("Command is required")
+                
+                # Process all commands through MCP
+                response = await app.state.mcp_server.process_command(command)
+                
+                # Send response
+                await websocket.send_text(json.dumps({
+                    "type": "response",
+                    "data": response
+                }))
                     
             except json.JSONDecodeError:
                 logger.error("Invalid JSON format received")

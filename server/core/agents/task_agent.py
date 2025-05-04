@@ -41,7 +41,13 @@ class TaskAgent(BaseAgent):
             agent=agent,
             tools=self.tools,
             memory=self.memory,
-            verbose=True
+            verbose=True,
+            return_intermediate_steps=True,
+            handle_parsing_errors=True,
+            agent_kwargs={
+                "memory_prompts": [MessagesPlaceholder(variable_name="chat_history")],
+                "input_variables": ["input", "agent_scratchpad", "chat_history", "tools", "tool_names"]
+            }
         )
 
     async def execute_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
@@ -63,13 +69,23 @@ class TaskAgent(BaseAgent):
 
     async def analyze_intent(self, command: str) -> Dict[str, Any]:
         """Analyze the intent of a user command"""
-        result = await self.agent_executor.arun(
-            f"Analyze the intent of this command: {command}"
+        result = await self.agent_executor.ainvoke(
+            {
+                "input": f"Analyze the intent of this command: {command}",
+                "chat_history": self.memory.chat_memory.messages if self.memory.chat_memory.messages else [],
+                "agent_scratchpad": [],  # Initialize as empty list for messages
+                "tools": self.tools,  # Add tools
+                "tool_names": [tool.name for tool in self.tools]  # Add tool names
+            }
         )
         
         # Parse the result into a structured format
-        intent_type = self._determine_intent_type(command, result)
-        parameters = self._extract_parameters(command, result)
+        intent_type = self._determine_intent_type(command, str(result.get("output", "")))
+        parameters = self._extract_parameters(command, str(result.get("output", "")))
+        
+        # Save the interaction in memory
+        await self.memory.chat_memory.add_user_message(command)
+        await self.memory.chat_memory.add_ai_message(str(result.get("output", "")))
         
         return {
             "intent_type": intent_type,
@@ -79,12 +95,16 @@ class TaskAgent(BaseAgent):
 
     async def decompose_task(self, task_intent: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Decompose a task into subtasks based on intent"""
-        result = await self.agent_executor.arun(
-            f"Decompose this task into subtasks: {task_intent}"
+        result = await self.agent_executor.ainvoke(
+            {
+                "input": f"Decompose this task into subtasks: {task_intent}",
+                "chat_history": self.memory.chat_memory.messages if self.memory.chat_memory.messages else [],
+                "agent_scratchpad": []
+            }
         )
         
         # Convert the agent's response into structured subtasks
-        return self._parse_subtasks(result, task_intent)
+        return self._parse_subtasks(str(result.get("output", "")), task_intent)
 
     async def aggregate_results(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Aggregate results from multiple subtasks"""
@@ -178,5 +198,11 @@ class TaskAgent(BaseAgent):
 
     async def _generate_summary(self, results: List[Dict[str, Any]]) -> str:
         """Generate a summary of the results"""
-        summary_prompt = f"Summarize these task results: {results}"
-        return await self.agent_executor.arun(summary_prompt) 
+        result = await self.agent_executor.ainvoke(
+            {
+                "input": f"Summarize these task results: {results}",
+                "chat_history": self.memory.chat_memory.messages if self.memory.chat_memory.messages else [],
+                "agent_scratchpad": []
+            }
+        )
+        return str(result.get("output", "")) 

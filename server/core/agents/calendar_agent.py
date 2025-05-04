@@ -46,23 +46,45 @@ class CalendarAgent(BaseAgent):
             agent=agent,
             tools=self.tools,
             memory=self.memory,
-            verbose=True
+            verbose=True,
+            return_intermediate_steps=True,
+            handle_parsing_errors=True,
+            agent_kwargs={
+                "memory_prompts": [MessagesPlaceholder(variable_name="chat_history")],
+                "input_variables": ["input", "agent_scratchpad", "chat_history", "tools", "tool_names"]
+            }
         )
 
     async def execute_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
         """Execute a calendar-related task"""
-        action = task.get("action")
-        parameters = task.get("parameters", {})
+        try:
+            result = await self.agent_executor.ainvoke(
+                {
+                    "input": str(task),
+                    "chat_history": self.memory.chat_memory.messages if self.memory.chat_memory.messages else [],
+                    "agent_scratchpad": [],  # Initialize as empty list for messages
+                    "tools": self.tools,  # Add tools
+                    "tool_names": [tool.name for tool in self.tools]  # Add tool names
+                }
+            )
+            
+            action = task.get("action")
+            parameters = task.get("parameters", {})
 
-        if action == "validate_datetime":
-            return await self._validate_datetime(parameters)
-        elif action == "create_event":
-            return await self._create_event(parameters)
-        
-        return {
-            "status": "error",
-            "message": f"Unknown calendar action: {action}"
-        }
+            if action == "validate_datetime":
+                return await self._validate_datetime(parameters)
+            elif action == "create_event":
+                return await self._create_event(parameters)
+            
+            return {
+                "status": "error",
+                "message": f"Unknown calendar action: {action}"
+            }
+        except Exception as e:
+            return {
+                "status": "error",
+                "message": f"Task execution failed: {str(e)}"
+            }
 
     async def _validate_datetime(self, parameters: Dict[str, Any]) -> Dict[str, Any]:
         """Validate date and time parameters"""
