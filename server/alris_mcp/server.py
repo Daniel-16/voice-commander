@@ -239,7 +239,6 @@ class AlrisMCPServer:
 
     async def handle_websocket(self, websocket: WebSocket):
         """Handle WebSocket connections and messages"""
-        await websocket.accept()
         logger.info("WebSocket connection accepted")
         
         try:
@@ -253,21 +252,32 @@ class AlrisMCPServer:
                     
                     if command:
                         response = await self.process_command(command)
-                        await websocket.send_text(json.dumps(response))
+                        await websocket.send_text(json.dumps({
+                            "type": "mcp_response",
+                            "data": response,
+                            "command": command
+                        }))
                     else:
                         await websocket.send_text(json.dumps({
-                            "status": "error",
-                            "message": "Invalid message format"
+                            "type": "error",
+                            "message": "Invalid message format: command is required"
                         }))
                         
                 except json.JSONDecodeError:
                     await websocket.send_text(json.dumps({
-                        "status": "error",
+                        "type": "error",
                         "message": "Invalid JSON format"
+                    }))
+                except Exception as e:
+                    logger.error(f"Error processing MCP message: {e}", exc_info=True)
+                    await websocket.send_text(json.dumps({
+                        "type": "error",
+                        "message": f"Failed to process MCP command: {str(e)}"
                     }))
                     
         except Exception as e:
-            logger.error(f"WebSocket error: {e}", exc_info=True)
+            logger.error(f"MCP WebSocket error: {e}", exc_info=True)
+        finally:
             await websocket.close()
 
     def run(self):
