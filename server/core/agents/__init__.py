@@ -56,7 +56,7 @@ class BaseAgent(ABC):
         try:
             formatted_input = {
                 "input": str(task),
-                "chat_history": self.memory.chat_memory.messages if self.memory.chat_memory.messages else []
+                "chat_history": self.memory.chat_memory.messages or []
             }
             
             result = await self.agent_executor.ainvoke(formatted_input)

@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from core.state_manager import StateManager
 from core.models import APITask
 from core.agents import CalendarAgent, BrowserAgent, TaskAgent
-from langchain.schema.messages import HumanMessage, AIMessage
+from langchain.schema.messages import HumanMessage
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -157,13 +157,10 @@ class AlrisMCPServer:
         logger.info(f"Processing command through MCP: {command}")
         task_id = None
         try:
-            # Create task state
             task_id = self.state_manager.create_task({"command": command})
             
-            # Format the command as a HumanMessage
-            formatted_command = HumanMessage(content=command)
+            # formatted_command = HumanMessage(content=command)
             
-            # 1. Intent Analysis with properly formatted messages
             intent_result = await self.task_agent.analyze_intent(command)
             self.state_manager.update_task_state(
                 task_id, 
@@ -171,7 +168,6 @@ class AlrisMCPServer:
                 context={"intent": intent_result}
             )
             
-            # 2. Task Decomposition
             sub_tasks = await self.task_agent.decompose_task(intent_result)
             self.state_manager.update_task_state(
                 task_id,
@@ -179,13 +175,11 @@ class AlrisMCPServer:
                 context={"sub_tasks": sub_tasks}
             )
             
-            # 3. Task Execution through appropriate agents
             results = []
             for task in sub_tasks:
                 try:
                     result = await self._delegate_task(task)
                     results.append(result)
-                    # Add task result to chat history
                     if isinstance(result.get("message"), str):
                         self.task_agent.memory.chat_memory.add_ai_message(result["message"])
                 except Exception as e:
@@ -196,13 +190,10 @@ class AlrisMCPServer:
                         "task": task
                     }
                     results.append(error_result)
-                    # Add error to chat history
                     self.task_agent.memory.chat_memory.add_ai_message(f"Error: {str(e)}")
             
-            # 4. Aggregate Results
             final_response = await self.task_agent.aggregate_results(results)
             
-            # Update final state
             self.state_manager.update_task_state(
                 task_id,
                 status="completed",
