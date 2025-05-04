@@ -1,18 +1,21 @@
 import os
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from abc import ABC, abstractmethod
 from langchain.agents import Tool
 from langchain.agents import AgentExecutor
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.memory import ConversationBufferMemory
 from dotenv import load_dotenv
-
 load_dotenv()
 
 class BaseAgent(ABC):
-    def __init__(self):
+    def __init__(self, model_name: Optional[str] = None):
+        model = model_name or os.getenv('GEMINI_MODEL')
+        if not model:
+            raise ValueError("GEMINI_MODEL environment variable must be set or model_name must be provided")
+            
         self.llm = ChatGoogleGenerativeAI(
-            model=f"{os.getenv('GEMINI_MODEL')}",
+            model=model,
             temperature=0,
             convert_system_message_to_human=True
         )
