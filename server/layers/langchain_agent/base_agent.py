@@ -10,11 +10,11 @@ from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 logger = logging.getLogger("langchain_agent.base")
 
 class BaseAgent(ABC):
-    """Base class for all LangChain agents in the system"""
+    """Base class for all LangChain agents"""
     
     def __init__(self, model_name: Optional[str] = None):
         """Initialize the base agent with LLM and memory"""
-        model = model_name or os.getenv('GEMINI_MODEL', 'gemini-pro')
+        model = model_name or os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')
         
         self.llm = ChatGoogleGenerativeAI(
             model=model,

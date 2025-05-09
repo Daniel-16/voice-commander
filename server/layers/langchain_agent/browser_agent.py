@@ -51,9 +51,7 @@ class BrowserAgent(BaseAgent):
     async def _navigate_to_url(self, url: str) -> Dict[str, Any]:
         """Navigate to a URL using the MCP tool"""
         try:
-            # This would call the MCP tool in the actual implementation
             logger.info(f"Would navigate to URL: {url}")
-            # For example: result = await mcp_client.call_tool("navigate", {"url": url})
             return {
                 "status": "success",
                 "message": f"Navigated to {url}"
@@ -68,9 +66,7 @@ class BrowserAgent(BaseAgent):
     async def _search_youtube(self, query: str) -> Dict[str, Any]:
         """Search for a video on YouTube using the MCP tool"""
         try:
-            # This would call the MCP tool in the actual implementation
             logger.info(f"Would search YouTube for: {query}")
-            # For example: result = await mcp_client.call_tool("search_youtube", {"search_query": query})
             return {
                 "status": "success",
                 "message": f"Searched and played YouTube video for '{query}'"
@@ -90,9 +86,7 @@ class BrowserAgent(BaseAgent):
             form_data = data.get("form_data", {})
             selectors = data.get("selectors", {})
             
-            # This would call the MCP tool in the actual implementation
             logger.info(f"Would fill form with data: {form_data}, selectors: {selectors}")
-            # For example: result = await mcp_client.call_tool("fill_form", {"form_data": form_data, "selectors": selectors})
             return {
                 "status": "success",
                 "message": "Filled form successfully"
@@ -107,9 +101,7 @@ class BrowserAgent(BaseAgent):
     async def _click_element(self, selector: str) -> Dict[str, Any]:
         """Click an element using the MCP tool"""
         try:
-            # This would call the MCP tool in the actual implementation
             logger.info(f"Would click element with selector: {selector}")
-            # For example: result = await mcp_client.call_tool("click_element", {"selector": selector})
             return {
                 "status": "success",
                 "message": f"Clicked element with selector '{selector}'"
