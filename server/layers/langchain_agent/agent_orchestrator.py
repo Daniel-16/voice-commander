@@ -1,0 +1,89 @@
+import logging
+from typing import Dict, Any, List, Optional
+import re
+
+from .browser_agent import BrowserAgent
+
+logger = logging.getLogger("langchain_agent.orchestrator")
+
+class AgentOrchestrator:
+    """
+    Orchestrates and coordinates different specialized agents
+    to handle user commands based on their intent
+    """
+    
+    def __init__(self):
+        """Initialize the orchestrator with specialized agents"""
+        self.browser_agent = BrowserAgent()
+        # Add other specialized agents here as they are implemented
+        # self.email_agent = EmailAgent()
+        # self.calendar_agent = CalendarAgent()
+        
+        self._intent_patterns = {
+            "browser": [
+                r"browse|navigate|go to|open.*website|visit|url|web page",
+                r"search.*youtube|play.*video|watch.*video",
+                r"fill.*form|input.*field|enter.*data",
+                r"click.*button|click.*link|press.*button",
+                r"screenshot|capture.*screen"
+            ],
+            # Add patterns for other agent types
+            "email": [
+                r"send.*email|compose.*email|mail to|email to"
+            ],
+            "calendar": [
+                r"schedule|meeting|appointment|calendar|event|remind"
+            ]
+        }
+        
+        logger.info("Agent Orchestrator initialized")
+    
+    def set_mcp_client(self, mcp_client):
+        """Set the MCP client for all agents"""
+        self.browser_agent.set_mcp_client(mcp_client)
+        # Set MCP client for other agents when implemented
+        # self.email_agent.set_mcp_client(mcp_client)
+        # self.calendar_agent.set_mcp_client(mcp_client)
+    
+    def _detect_intent(self, command: str) -> str:
+        """
+        Detect the intent of a user command to select the appropriate agent
+        """
+        command = command.lower()
+        
+        for intent_type, patterns in self._intent_patterns.items():
+            for pattern in patterns:
+                if re.search(pattern, command):
+                    logger.info(f"Detected {intent_type} intent in command: {command}")
+                    return intent_type
+        
+        logger.info(f"No specific intent detected in command: {command}")
+        return "general"
+    
+    async def process_command(self, command: str) -> Dict[str, Any]:
+        """
+        Process a user command by selecting and executing the appropriate agent
+        """
+        logger.info(f"Processing command: {command}")
+        
+        # Detect the intent of the command
+        intent = self._detect_intent(command)
+        
+        # Select the appropriate agent based on intent
+        if intent == "browser":
+            result = await self.browser_agent.execute(command)
+        # Add other intent handlers when implemented
+        # elif intent == "email":
+        #     result = await self.email_agent.execute(command)
+        # elif intent == "calendar":
+        #     result = await self.calendar_agent.execute(command)
+        else:
+            # Default to browser agent for now
+            logger.info(f"Using browser agent for general command: {command}")
+            result = await self.browser_agent.execute(command)
+        
+        return {
+            "intent": intent,
+            "command": command,
+            "result": result
+        } 

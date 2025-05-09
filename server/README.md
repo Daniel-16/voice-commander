@@ -2,6 +2,35 @@
 
 A FastAPI-based server that powers Alris's automation engine, transforming natural language commands into executable tasks through both REST and WebSocket endpoints.
 
+## Architecture
+
+Alris follows a layered architecture with three distinct layers:
+
+### 1. LangChain Agent Layer
+
+- **Purpose**: The intelligent core that interprets and plans task execution.
+- **Responsibilities**:
+  - Uses language models to understand user intent
+  - Breaks commands into actionable steps
+  - Coordinates the use of tools via the MCP Layer
+- **Components**: `AgentOrchestrator`, `BrowserAgent`, etc.
+
+### 2. MCP (Model Context Protocol) Layer
+
+- **Purpose**: A connector that links agents to external tools.
+- **Responsibilities**:
+  - Provides standardized access to tools like Playwright for browser automation
+  - Manages tool invocation
+- **Components**: `MCPConnector`, `AlrisMCPClient`
+
+### 3. External Services Layer
+
+- **Purpose**: Executes the tasks in the real world.
+- **Responsibilities**:
+  - Handles actions like browser navigation, form filling, or API calls
+  - Includes services for browser automation, email, etc.
+- **Components**: `BrowserService`, `EmailService`, etc.
+
 ## Features
 
 - Real-time communication via WebSocket
@@ -25,6 +54,7 @@ Major dependencies include:
 - Playwright
 - LangChain
 - Google Generative AI
+- MCP (Model Context Protocol)
 - WebSockets
 
 ## Installation
@@ -59,6 +89,23 @@ python run.py
 
 The server will start on the default host and port (typically localhost:8000).
 
+## Example Usage
+
+Here's an example of how Alris processes the command "Fill out the form on example.com with name 'John'":
+
+1. **LangChain Agent Layer**:
+   - Interprets the command and plans steps: navigate to URL, find name field, input "John", submit
+2. **MCP Connector Layer**:
+   - Provides tools to the agent:
+     - `navigate_to_url("https://example.com")`
+     - `fill_form_field("#name", "John")`
+     - `click_button("#submit")`
+3. **External Services Layer (Playwright)**:
+   - Executes the actions in a browser:
+     - Loads the webpage
+     - Inputs "John" in the name field
+     - Submits the form
+
 ## API Endpoints
 
 ### WebSocket Endpoint
@@ -67,7 +114,6 @@ The server will start on the default host and port (typically localhost:8000).
 
 ### REST Endpoints
 
-- `POST /command` - Process commands via REST API
 - `GET /health` - Health check endpoint
 
 ## Browser Automation

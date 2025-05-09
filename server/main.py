@@ -1,42 +1,73 @@
 from dotenv import load_dotenv
 load_dotenv()
 
+import logging
+import json
+import threading
+import asyncio
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from core.models import UserCommand
-from alris_mcp.server import AlrisMCPServer
-import json
-import logging
-import threading
 
+# Import layer components
+from layers.langchain_agent import AgentOrchestrator
+from layers.mcp_connector import MCPConnector, AlrisMCPClient
+from layers.external_services import BrowserService
+
+# Configure logging
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler("alris_fastapi.log")
+        logging.FileHandler("alris_server.log")
     ]
 )
-logger = logging.getLogger("alris_fastapi")
+logger = logging.getLogger("alris_server")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for FastAPI application"""
-    logger.info("Starting FastAPI application")
-    mcp_server = AlrisMCPServer()
+    logger.info("Starting Alris server with layered architecture")
+    
+    # Initialize External Services Layer
+    # (Nothing to do here as services are initialized by the MCP connector)
+    
+    # Initialize MCP Connector Layer (bridge between agents and services)
+    mcp_connector = MCPConnector()
+    
     # Run MCP server in a separate thread
-    mcp_thread = threading.Thread(target=mcp_server.run, daemon=True)
+    mcp_thread = threading.Thread(target=mcp_connector.run, daemon=True)
     mcp_thread.start()
-    app.state.mcp_server = mcp_server
+    logger.info("MCP connector server started")
+    
+    # Initialize MCP client
+    mcp_client = AlrisMCPClient()
+    await mcp_client.connect()
+    logger.info("MCP client connected")
+    
+    # Initialize LangChain Agent Layer
+    agent_orchestrator = AgentOrchestrator()
+    agent_orchestrator.set_mcp_client(mcp_client)
+    logger.info("Agent orchestrator initialized with MCP client")
+    
+    # Store components in app state
+    app.state.mcp_connector = mcp_connector
     app.state.mcp_thread = mcp_thread
-    logger.info("MCP server started")
+    app.state.mcp_client = mcp_client
+    app.state.agent_orchestrator = agent_orchestrator
+    
     yield
-    logger.info("Shutting down FastAPI application")
-    logger.info("MCP server stopped")
+    
+    # Shutdown in reverse order
+    logger.info("Shutting down Alris server")
+    await mcp_client.disconnect()
+    # MCP server thread is daemon, so it will be terminated when the main thread exits
 
+# Initialize FastAPI app
 app = FastAPI(title="Alris Server", lifespan=lifespan)
 
+# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -47,7 +78,7 @@ app.add_middleware(
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    """Main WebSocket endpoint for all communication"""
+    """WebSocket endpoint for real-time communication"""
     logger.info("Received WebSocket connection")
     await websocket.accept()
     
@@ -65,8 +96,9 @@ async def websocket_endpoint(websocket: WebSocket):
                 if not command:
                     raise ValueError("Command is required")
                 
-                # Process all commands through MCP
-                response = await app.state.mcp_server.process_command(command)
+                # Process command through the agent orchestrator (LangChain Agent Layer)
+                # The agent will use the MCP client to execute tools via the MCP connector
+                response = await app.state.agent_orchestrator.process_command(command)
                 
                 # Send response
                 await websocket.send_text(json.dumps({
@@ -104,18 +136,26 @@ async def health_check():
     logger.info("Health check requested")
     
     mcp_status = "running" if app.state.mcp_thread and app.state.mcp_thread.is_alive() else "stopped"
+    mcp_client_status = "connected" if app.state.mcp_client and app.state.mcp_client.connected else "disconnected"
     
     return {
         "status": "healthy",
         "components": {
-            "mcp_server": {
+            "mcp_connector": {
                 "status": mcp_status,
-                "tools": list(app.state.mcp_server.tools.keys()) if hasattr(app.state.mcp_server, "tools") else []
+                "tools": list(app.state.mcp_connector.tools.keys()) if hasattr(app.state.mcp_connector, "tools") else []
+            },
+            "mcp_client": {
+                "status": mcp_client_status
+            },
+            "agent_orchestrator": {
+                "status": "initialized",
+                "agents": ["BrowserAgent"]
             },
             "websocket": {
                 "status": "available",
                 "endpoint": "/ws"
             }
         },
-        "version": "1.0.0"
+        "version": "2.0.0"
     }
