@@ -16,21 +16,18 @@ class BaseAgent(ABC):
         """Initialize the base agent with LLM and memory"""
         model = model_name or os.getenv('GEMINI_MODEL', 'gemini-pro')
         
-        # Initialize the language model
         self.llm = ChatGoogleGenerativeAI(
             model=model,
             temperature=0,
             convert_system_message_to_human=True
         )
         
-        # Initialize the memory
         self.memory = ConversationBufferMemory(
             memory_key="chat_history",
             return_messages=True,
             output_key="output"
         )
         
-        # Get tools and create agent executor
         self.tools = self._get_tools()
         self.agent_executor = self._create_agent_executor()
         

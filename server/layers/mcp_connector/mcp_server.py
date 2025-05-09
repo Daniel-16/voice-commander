@@ -7,7 +7,6 @@ from ..external_services import BrowserService, EmailService
 
 logger = logging.getLogger("mcp_connector.server")
 
-# Tool parameter models
 class NavigateParams(BaseModel):
     url: str
 
@@ -36,11 +35,9 @@ class MCPConnector:
         """Initialize the MCP connector with required services"""
         self.mcp = FastMCP(name)
         
-        # Initialize external services
         self.browser_service = BrowserService()
         self.email_service = EmailService()
         
-        # Register MCP tools
         self._register_tools()
         
         logger.info("MCP Connector initialized")
@@ -48,7 +45,6 @@ class MCPConnector:
     def _register_tools(self):
         """Register all tools with the MCP server"""
         
-        # Browser tools
         @self.mcp.tool()
         async def navigate(params: NavigateParams) -> Dict[str, Any]:
             """Navigate to a URL in the browser"""
@@ -70,7 +66,6 @@ class MCPConnector:
             url = f"https://www.youtube.com/results?search_query={query}"
             success = await self.browser_service.navigate(url)
             if success:
-                # Click on the first video
                 await self.browser_service.click_element("a#video-title")
                 return {
                     "status": "success",
@@ -152,4 +147,3 @@ class MCPConnector:
         """Shutdown the MCP server and services"""
         logger.info("Shutting down MCP server")
         await self.browser_service.close()
-        # Add other service shutdown calls here 
