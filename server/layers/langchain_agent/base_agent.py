@@ -5,7 +5,9 @@ from abc import ABC, abstractmethod
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.memory import ConversationBufferMemory
 from langchain.agents import Tool, AgentExecutor, create_structured_chat_agent
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder, PromptTemplate
+from langchain.prompts.chat import HumanMessagePromptTemplate, SystemMessagePromptTemplate
+from langchain.schema import AIMessage, HumanMessage
 
 logger = logging.getLogger("langchain_agent.base")
 
@@ -42,15 +44,6 @@ class BaseAgent(ABC):
         """Create an agent executor with the tools and memory"""
         prompt = self._get_agent_prompt()
         
-        tool_names = [tool.name for tool in self.tools]
-        tool_strings = [f"{tool.name}: {tool.description}" for tool in self.tools]
-        
-        prompt = prompt.partial(
-            tools="\n".join(tool_strings),
-            tool_names=", ".join(tool_names),
-            system_prompt=self._get_system_prompt()
-        )
-        
         agent = create_structured_chat_agent(
             llm=self.llm,
             tools=self.tools,
@@ -68,21 +61,48 @@ class BaseAgent(ABC):
     
     def _get_agent_prompt(self) -> ChatPromptTemplate:
         """Get the prompt for the agent"""
-        return ChatPromptTemplate.from_messages([
-            ("system", """You are a helpful AI assistant. You have access to the following tools:
 
-{tools}
+        custom_instructions = self._get_system_prompt()
 
-To use a tool, please use the following format:
-<tool>tool_name: tool input</tool>
+        system_message_template_str = f"""You are a helpful AI assistant. You have access to the following tools:
 
-Available tools: {tool_names}
+{{tools}}
 
-{system_prompt}"""),
+To use a tool, you MUST use the following format, with a single JSON blob in your response:
+```json
+{{
+  "action": "tool_name",
+  "action_input": "tool input"
+}}
+```
+
+If you are providing a final answer, use the "Final Answer" action. The available tools are: {{tool_names}}.
+
+{custom_instructions}"""
+
+        messages = [
+            SystemMessagePromptTemplate(
+                prompt=PromptTemplate(
+                    template=system_message_template_str,
+                    input_variables=["tools", "tool_names"]
+                )
+            ),
             MessagesPlaceholder(variable_name="chat_history"),
-            ("human", "{input}"),
+            HumanMessagePromptTemplate(
+                prompt=PromptTemplate(input_variables=["input"], template="{{input}}")
+            ),
             MessagesPlaceholder(variable_name="agent_scratchpad"),
-        ])
+        ]
+
+        return ChatPromptTemplate.from_messages(messages)
+    
+    def _format_agent_scratchpad(self, intermediate_steps):
+        """Format the agent scratchpad to ensure it's a list of base messages"""
+        messages = []
+        for action, observation in intermediate_steps:
+            messages.append(AIMessage(content=action.log))
+            messages.append(HumanMessage(content=f"Observation: {observation}"))
+        return messages
     
     @abstractmethod
     def _get_system_prompt(self) -> str:
@@ -94,7 +114,8 @@ Available tools: {tool_names}
         try:
             result = await self.agent_executor.ainvoke({
                 "input": input_text,
-                "chat_history": self.memory.chat_memory.messages or []
+                "chat_history": self.memory.chat_memory.messages or [],
+                "agent_scratchpad": []
             })
             
             return {

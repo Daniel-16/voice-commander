@@ -5,6 +5,8 @@ import logging
 import json
 import threading
 import asyncio
+import signal
+import os
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -23,19 +25,45 @@ logging.basicConfig(
 )
 logger = logging.getLogger("alris_server")
 
+mcp_client = None
+mcp_thread = None
+mcp_connector = None
+
+def handle_sigterm(*args):
+    logger.info("Received SIGTERM signal, initiating graceful shutdown")
+    if mcp_client and hasattr(mcp_client, 'disconnect'):
+        loop = asyncio.get_event_loop()
+        try:
+            loop.run_until_complete(mcp_client.disconnect())
+            logger.info("MCP client disconnected successfully on SIGTERM")
+        except Exception as e:
+            logger.error(f"Error disconnecting MCP client on SIGTERM: {str(e)}")
+
+signal.signal(signal.SIGTERM, handle_sigterm)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for FastAPI application"""
-    logger.info("Starting Alris server with layered architecture")    
-    mcp_connector = MCPConnector()
+    global mcp_client, mcp_thread, mcp_connector
     
-    mcp_thread = threading.Thread(target=mcp_connector.run, daemon=True)
-    mcp_thread.start()
-    logger.info("MCP connector server started")
+    logger.info("Starting Alris server with layered architecture")
     
-    mcp_client = AlrisMCPClient()
-    await mcp_client.connect()
-    logger.info("MCP client connected")
+    if mcp_connector is None:
+        mcp_connector = MCPConnector()
+        logger.info("MCP connector initialized")
+    
+    if mcp_thread is None or not mcp_thread.is_alive():
+        mcp_thread = threading.Thread(target=mcp_connector.run, daemon=True)
+        mcp_thread.start()
+        logger.info("MCP connector server thread started")
+    
+    if mcp_client is None:
+        mcp_client = AlrisMCPClient()
+        connected = await mcp_client.connect()
+        if connected:
+            logger.info("MCP client connected successfully")
+        else:
+            logger.error("Failed to connect MCP client")
     
     agent_orchestrator = AgentOrchestrator()
     agent_orchestrator.set_mcp_client(mcp_client)
@@ -48,8 +76,7 @@ async def lifespan(app: FastAPI):
     
     yield
     
-    logger.info("Shutting down Alris server")
-    await mcp_client.disconnect()
+    logger.info("FastAPI application shutting down")
 
 app = FastAPI(title="Alris Server", lifespan=lifespan)
 
@@ -139,3 +166,13 @@ async def health_check():
         },
         "version": "2.0.0"
     }
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "main:app", 
+        host="0.0.0.0", 
+        port=8000, 
+        reload=False,
+        log_level="debug"
+    )

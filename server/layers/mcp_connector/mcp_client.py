@@ -85,11 +85,20 @@ class AlrisMCPClient:
             }
     
     async def disconnect(self):
-        if self.exit_stack:
+        if self.connected:
+            logger.info("Disconnecting from MCP server")
+            self.connected = False
+            self.session = None
+            
             try:
-                await self.exit_stack.aclose()
-                logger.info("Disconnected from MCP server")
+                await asyncio.shield(self.exit_stack.aclose())
+                logger.info("Successfully closed MCP exit stack")
+            except asyncio.CancelledError:
+                logger.warning("MCP disconnect operation was cancelled, resources may not be fully cleaned up")
+            except RuntimeError as e:
+                if "Attempted to exit cancel scope" in str(e):
+                    logger.warning(f"Cancel scope error during disconnect: {str(e)}")
+                else:
+                    logger.error(f"Runtime error during disconnect: {str(e)}")
             except Exception as e:
-                logger.error(f"Error disconnecting from MCP server: {str(e)}")
-        self.connected = False
-        self.session = None 
+                logger.error(f"Error disconnecting from MCP server: {str(e)}") 
