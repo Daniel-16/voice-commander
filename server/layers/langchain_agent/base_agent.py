@@ -8,6 +8,7 @@ from langchain.agents import Tool, AgentExecutor, create_structured_chat_agent
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder, PromptTemplate
 from langchain.prompts.chat import HumanMessagePromptTemplate, SystemMessagePromptTemplate
 from langchain.schema import AIMessage, HumanMessage
+from langchain.agents.format_scratchpad.log_to_messages import format_log_to_messages
 
 logger = logging.getLogger("langchain_agent.base")
 
@@ -70,10 +71,10 @@ class BaseAgent(ABC):
 
 To use a tool, you MUST use the following format, with a single JSON blob in your response:
 ```json
-{{
+{{{{
   "action": "tool_name",
   "action_input": "tool input"
-}}
+}}}}
 ```
 
 If you are providing a final answer, use the "Final Answer" action. The available tools are: {{tool_names}}.
@@ -88,21 +89,18 @@ If you are providing a final answer, use the "Final Answer" action. The availabl
                 )
             ),
             MessagesPlaceholder(variable_name="chat_history"),
-            HumanMessagePromptTemplate(
-                prompt=PromptTemplate(input_variables=["input"], template="{{input}}")
-            ),
+            ("human", "{input}"),
             MessagesPlaceholder(variable_name="agent_scratchpad"),
         ]
 
         return ChatPromptTemplate.from_messages(messages)
     
     def _format_agent_scratchpad(self, intermediate_steps):
-        """Format the agent scratchpad to ensure it's a list of base messages"""
-        messages = []
-        for action, observation in intermediate_steps:
-            messages.append(AIMessage(content=action.log))
-            messages.append(HumanMessage(content=f"Observation: {observation}"))
-        return messages
+        """Format the agent scratchpad as a list of base messages"""
+        if not intermediate_steps:
+            return []
+        
+        return format_log_to_messages(intermediate_steps)
     
     @abstractmethod
     def _get_system_prompt(self) -> str:
@@ -112,11 +110,14 @@ If you are providing a final answer, use the "Final Answer" action. The availabl
     async def execute(self, input_text: str) -> Dict[str, Any]:
         """Execute the agent with the given input"""
         try:
+            logger.debug(f"Executing agent with input: {input_text}")
+            
             result = await self.agent_executor.ainvoke({
                 "input": input_text,
-                "chat_history": self.memory.chat_memory.messages or [],
-                "agent_scratchpad": []
+                "chat_history": self.memory.chat_memory.messages or []
             })
+            
+            logger.debug(f"Agent execution completed successfully")
             
             return {
                 "status": "success",
@@ -125,6 +126,7 @@ If you are providing a final answer, use the "Final Answer" action. The availabl
             }
         except Exception as e:
             logger.error(f"Error executing agent: {str(e)}")
+            logger.exception("Full agent execution error:")
             return {
                 "status": "error",
                 "message": f"Failed to execute agent: {str(e)}"
