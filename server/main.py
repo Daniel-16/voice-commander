@@ -9,12 +9,10 @@ from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-# Import layer components
 from layers.langchain_agent import AgentOrchestrator
 from layers.mcp_connector import MCPConnector, AlrisMCPClient
 from layers.external_services import BrowserService
 
-# Configure logging
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -28,30 +26,21 @@ logger = logging.getLogger("alris_server")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for FastAPI application"""
-    logger.info("Starting Alris server with layered architecture")
-    
-    # Initialize External Services Layer
-    # (Nothing to do here as services are initialized by the MCP connector)
-    
-    # Initialize MCP Connector Layer (bridge between agents and services)
+    logger.info("Starting Alris server with layered architecture")    
     mcp_connector = MCPConnector()
     
-    # Run MCP server in a separate thread
     mcp_thread = threading.Thread(target=mcp_connector.run, daemon=True)
     mcp_thread.start()
     logger.info("MCP connector server started")
     
-    # Initialize MCP client
     mcp_client = AlrisMCPClient()
     await mcp_client.connect()
     logger.info("MCP client connected")
     
-    # Initialize LangChain Agent Layer
     agent_orchestrator = AgentOrchestrator()
     agent_orchestrator.set_mcp_client(mcp_client)
     logger.info("Agent orchestrator initialized with MCP client")
     
-    # Store components in app state
     app.state.mcp_connector = mcp_connector
     app.state.mcp_thread = mcp_thread
     app.state.mcp_client = mcp_client
@@ -59,15 +48,11 @@ async def lifespan(app: FastAPI):
     
     yield
     
-    # Shutdown in reverse order
     logger.info("Shutting down Alris server")
     await mcp_client.disconnect()
-    # MCP server thread is daemon, so it will be terminated when the main thread exits
 
-# Initialize FastAPI app
 app = FastAPI(title="Alris Server", lifespan=lifespan)
 
-# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -84,23 +69,18 @@ async def websocket_endpoint(websocket: WebSocket):
     
     try:
         while True:
-            # Receive message
             message = await websocket.receive_text()
             logger.debug(f"Received WebSocket message: {message}")
             
             try:
-                # Parse the message
                 data = json.loads(message)
                 command = data.get("command")
                 
                 if not command:
                     raise ValueError("Command is required")
                 
-                # Process command through the agent orchestrator (LangChain Agent Layer)
-                # The agent will use the MCP client to execute tools via the MCP connector
                 response = await app.state.agent_orchestrator.process_command(command)
                 
-                # Send response
                 await websocket.send_text(json.dumps({
                     "type": "response",
                     "data": response
