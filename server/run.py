@@ -1,28 +1,30 @@
+import os
 import logging
+import uvicorn
 from dotenv import load_dotenv
-from alris_mcp.server import AlrisMCPServer
 
 load_dotenv()
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler("alris_mcp_run.log")
+        logging.FileHandler("alris_server.log")
     ]
 )
-logger = logging.getLogger("alris_mcp_run")
-
-def main():
-    logger.info("Starting Alris MCP server")
-    try:
-        server = AlrisMCPServer()
-        logger.debug("AlrisMCPServer instance created")
-        server.run()
-    except Exception as e:
-        logger.error(f"Failed to start server: {e}", exc_info=True)
-        raise
+logger = logging.getLogger("alris_run")
 
 if __name__ == "__main__":
-    main()
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", "8000"))
+    
+    logger.info(f"Starting Alris server on {host}:{port}")
+    logger.info("Using layered architecture with LangChain Agent, MCP Connector, and External Services layers")
+    
+    uvicorn.run(
+        "main:app",
+        host=host,
+        port=port,
+        reload=os.getenv("ALRIS_RELOAD", "False").lower() == "true"
+    )

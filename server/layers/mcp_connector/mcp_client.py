@@ -1,0 +1,95 @@
+import logging
+import asyncio
+import os
+import sys
+from typing import Dict, Any, Optional
+from contextlib import AsyncExitStack
+
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+
+logger = logging.getLogger("mcp_connector.client")
+
+class AlrisMCPClient:
+    def __init__(self, host: str = "localhost", port: int = 8080):
+        self.host = host
+        self.port = port
+        self.exit_stack = AsyncExitStack()
+        self.session = None
+        self.connected = False
+        self.protocol_version = "2025-03-26"
+        
+    async def connect(self) -> bool:
+        try:
+            logger.info(f"Connecting to MCP server at {self.host}:{self.port}")
+            
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            server_dir = os.path.abspath(os.path.join(current_dir, '..', '..'))
+            server_script = os.path.join(server_dir, 'main.py')
+            
+            logger.info(f"Using server script at: {server_script}")
+            
+            env = os.environ.copy()
+            if 'PYTHONPATH' in env:
+                env['PYTHONPATH'] = f"{server_dir}:{env['PYTHONPATH']}"
+            else:
+                env['PYTHONPATH'] = server_dir
+            
+            env['MCP_PROTOCOL_VERSION'] = self.protocol_version
+            
+            server_params = StdioServerParameters(
+                command="python",
+                args=[server_script],
+                env=env
+            )
+            
+            stdio_transport = await self.exit_stack.enter_async_context(stdio_client(server_params))
+            read_stream, write_stream = stdio_transport
+            
+            self.session = await self.exit_stack.enter_async_context(
+                ClientSession(
+                    read_stream, 
+                    write_stream,
+                    protocol_version=self.protocol_version
+                )
+            )
+            
+            await self.session.initialize(protocol_version=self.protocol_version)
+            
+            self.connected = True
+            logger.info("Connected to MCP server")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to connect to MCP server: {str(e)}")
+            self.connected = False
+            return False
+    
+    async def call_tool(self, tool_name: str, params: Dict[str, Any]) -> Dict[str, Any]:
+        if not self.connected or not self.session:
+            logger.error("Not connected to MCP server")
+            return {
+                "status": "error",
+                "message": "Not connected to MCP server"
+            }
+        
+        try:
+            logger.info(f"Calling MCP tool: {tool_name} with params: {params}")
+            result = await self.session.call_tool(tool_name, params)
+            logger.info(f"MCP tool result: {result}")
+            return result
+        except Exception as e:
+            logger.error(f"Error calling MCP tool {tool_name}: {str(e)}")
+            return {
+                "status": "error",
+                "message": f"Error calling MCP tool: {str(e)}"
+            }
+    
+    async def disconnect(self):
+        if self.exit_stack:
+            try:
+                await self.exit_stack.aclose()
+                logger.info("Disconnected from MCP server")
+            except Exception as e:
+                logger.error(f"Error disconnecting from MCP server: {str(e)}")
+        self.connected = False
+        self.session = None 
