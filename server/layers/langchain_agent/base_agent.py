@@ -42,6 +42,15 @@ class BaseAgent(ABC):
         """Create an agent executor with the tools and memory"""
         prompt = self._get_agent_prompt()
         
+        tool_names = [tool.name for tool in self.tools]
+        tool_strings = [f"{tool.name}: {tool.description}" for tool in self.tools]
+        
+        prompt = prompt.partial(
+            tools="\n".join(tool_strings),
+            tool_names=", ".join(tool_names),
+            system_prompt=self._get_system_prompt()
+        )
+        
         agent = create_structured_chat_agent(
             llm=self.llm,
             tools=self.tools,
@@ -60,7 +69,16 @@ class BaseAgent(ABC):
     def _get_agent_prompt(self) -> ChatPromptTemplate:
         """Get the prompt for the agent"""
         return ChatPromptTemplate.from_messages([
-            ("system", self._get_system_prompt()),
+            ("system", """You are a helpful AI assistant. You have access to the following tools:
+
+{tools}
+
+To use a tool, please use the following format:
+<tool>tool_name: tool input</tool>
+
+Available tools: {tool_names}
+
+{system_prompt}"""),
             MessagesPlaceholder(variable_name="chat_history"),
             ("human", "{input}"),
             MessagesPlaceholder(variable_name="agent_scratchpad"),
