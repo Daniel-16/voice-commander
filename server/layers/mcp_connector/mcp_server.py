@@ -2,7 +2,6 @@ import logging
 from typing import Dict, Any, Optional, List
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel
-
 from ..external_services import BrowserService, EmailService
 
 logger = logging.getLogger("mcp_connector.server")
