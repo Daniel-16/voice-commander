@@ -2,7 +2,6 @@ import logging
 from typing import Dict, Any
 import re
 import asyncio
-
 from .browser_agent import BrowserAgent
 
 logger = logging.getLogger("langchain_agent.orchestrator")
@@ -87,12 +86,10 @@ class AgentOrchestrator:
     async def cleanup(self):
         """Cleanup any pending tasks"""
         try:
-            # Cancel all pending tasks
             for task in self._cleanup_tasks:
                 if not task.done():
                     task.cancel()
             
-            # Wait for all tasks to complete
             if self._cleanup_tasks:
                 await asyncio.gather(*self._cleanup_tasks, return_exceptions=True)
         except Exception as e:

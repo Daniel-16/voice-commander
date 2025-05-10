@@ -4,7 +4,6 @@ import os
 import sys
 from typing import Dict, Any, Optional
 from contextlib import AsyncExitStack, suppress
-
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
@@ -94,7 +93,7 @@ class AlrisMCPClient:
         
         self.connected = False
         
-        session = self.session
+        # session = self.session
         self.session = None
         
         try:
