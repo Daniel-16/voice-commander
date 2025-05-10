@@ -1,11 +1,11 @@
 import logging
 from typing import List, Dict, Any
 from langchain.agents import Tool
-from .base_agent import BaseAgent
+from .react_agent import BaseReactAgent
 
 logger = logging.getLogger("langchain_agent.browser")
 
-class BrowserAgent(BaseAgent):
+class BrowserAgent(BaseReactAgent):
     """LangChain agent for browser automation tasks"""
     
     def _get_tools(self) -> List[Tool]:
@@ -67,10 +67,11 @@ class BrowserAgent(BaseAgent):
         """Search for a video on YouTube using the MCP tool"""
         try:
             logger.info(f"Would search YouTube for: {query}")
-            return {
+            result = {
                 "status": "success",
                 "message": f"Searched and played YouTube video for '{query}'"
             }
+            return result
         except Exception as e:
             logger.error(f"Failed to search YouTube: {str(e)}")
             return {

@@ -3,7 +3,7 @@ import asyncio
 import os
 import sys
 from typing import Dict, Any, Optional
-from contextlib import AsyncExitStack
+from contextlib import AsyncExitStack, suppress
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -85,20 +85,32 @@ class AlrisMCPClient:
             }
     
     async def disconnect(self):
-        if self.connected:
-            logger.info("Disconnecting from MCP server")
-            self.connected = False
-            self.session = None
+        """Safely disconnect from the MCP server with proper resource cleanup"""
+        if not self.connected:
+            logger.debug("MCP client already disconnected")
+            return
             
-            try:
-                await asyncio.shield(self.exit_stack.aclose())
-                logger.info("Successfully closed MCP exit stack")
-            except asyncio.CancelledError:
-                logger.warning("MCP disconnect operation was cancelled, resources may not be fully cleaned up")
-            except RuntimeError as e:
-                if "Attempted to exit cancel scope" in str(e):
-                    logger.warning(f"Cancel scope error during disconnect: {str(e)}")
-                else:
-                    logger.error(f"Runtime error during disconnect: {str(e)}")
-            except Exception as e:
-                logger.error(f"Error disconnecting from MCP server: {str(e)}") 
+        logger.info("Disconnecting from MCP server")
+        
+        self.connected = False
+        
+        session = self.session
+        self.session = None
+        
+        try:
+            async def close_with_timeout():
+                with suppress(asyncio.CancelledError, RuntimeError, Exception):
+                    await self.exit_stack.aclose()
+            
+            await asyncio.wait_for(close_with_timeout(), timeout=2.0)
+            logger.info("Successfully closed MCP exit stack")
+        except asyncio.TimeoutError:
+            logger.warning("MCP disconnect timed out, forcing exit")
+        except asyncio.CancelledError:
+            logger.warning("MCP disconnect operation was cancelled")
+        except RuntimeError as e:
+            logger.warning(f"Runtime error during MCP disconnect (likely task context issue): {str(e)}")
+        except Exception as e:
+            logger.error(f"Error disconnecting from MCP server: {str(e)}")
+            
+        self.exit_stack = AsyncExitStack() 

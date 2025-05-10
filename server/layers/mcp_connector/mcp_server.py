@@ -107,7 +107,6 @@ class MCPConnector:
                 "message": f"Failed to click element: {params.selector}"
             }
         
-        # Email tools
         @self.mcp.tool()
         async def send_email(params: EmailParams) -> Dict[str, Any]:
             """Send an email"""
@@ -146,4 +145,23 @@ class MCPConnector:
     async def shutdown(self):
         """Shutdown the MCP server and services"""
         logger.info("Shutting down MCP server")
-        await self.browser_service.close()
+        
+        try:
+            await self.browser_service.close()
+            logger.info("Browser service closed successfully")
+        except Exception as e:
+            logger.error(f"Error closing browser service: {str(e)}")
+            
+        try:
+            if hasattr(self.mcp, "close") and callable(self.mcp.close):
+                await self.mcp.close()
+                logger.info("MCP server closed successfully")
+            elif hasattr(self.mcp, "shutdown") and callable(self.mcp.shutdown):
+                await self.mcp.shutdown()
+                logger.info("MCP server shut down successfully")
+            else:
+                logger.info("No direct shutdown method for MCP server, skipping")
+        except Exception as e:
+            logger.error(f"Error shutting down MCP server: {str(e)}")
+            
+        logger.info("MCP connector shutdown complete")

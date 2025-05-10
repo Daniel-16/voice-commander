@@ -1,6 +1,7 @@
 import logging
 from typing import Dict, Any
 import re
+import asyncio
 
 from .browser_agent import BrowserAgent
 
@@ -15,6 +16,7 @@ class AgentOrchestrator:
     def __init__(self):
         """Initialize the orchestrator with specialized agents"""
         self.browser_agent = BrowserAgent()
+        self._cleanup_tasks = set()
         
         self._intent_patterns = {
             "browser": [
@@ -53,22 +55,47 @@ class AgentOrchestrator:
         logger.info(f"No specific intent detected in command: {command}")
         return "general"
     
-    async def process_command(self, command: str) -> Dict[str, Any]:
+    async def process_command(self, command: str, thread_id: str = None) -> Dict[str, Any]:
         """
         Process a user command
         """
-        logger.info(f"Processing command: {command}")
-        
-        intent = self._detect_intent(command)
-        
-        if intent == "browser":
-            result = await self.browser_agent.execute(command)
-        else:
-            logger.info(f"Using browser agent for general command: {command}")
-            result = await self.browser_agent.execute(command)
-        
-        return {
-            "intent": intent,
-            "command": command,
-            "result": result
-        } 
+        try:
+            logger.info(f"Processing command: {command}")
+            
+            intent = self._detect_intent(command)
+            
+            if intent == "browser":
+                result = await self.browser_agent.execute(command, thread_id=thread_id)
+            else:
+                logger.info(f"Using browser agent for general command: {command}")
+                result = await self.browser_agent.execute(command, thread_id=thread_id)
+            
+            return {
+                "intent": intent,
+                "command": command,
+                "result": result
+            }
+        except Exception as e:
+            logger.error(f"Error processing command: {str(e)}")
+            logger.exception("Full command processing error:")
+            return {
+                "intent": "error",
+                "command": command,
+                "error": str(e)
+            }
+    
+    async def cleanup(self):
+        """Cleanup any pending tasks"""
+        try:
+            # Cancel all pending tasks
+            for task in self._cleanup_tasks:
+                if not task.done():
+                    task.cancel()
+            
+            # Wait for all tasks to complete
+            if self._cleanup_tasks:
+                await asyncio.gather(*self._cleanup_tasks, return_exceptions=True)
+        except Exception as e:
+            logger.error(f"Error during cleanup: {str(e)}")
+        finally:
+            self._cleanup_tasks.clear() 

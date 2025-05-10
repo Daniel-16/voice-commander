@@ -57,7 +57,8 @@ class BaseAgent(ABC):
             memory=self.memory,
             verbose=True,
             handle_parsing_errors=True,
-            max_iterations=10
+            max_iterations=10,
+            return_intermediate_steps=True
         )
     
     def _get_agent_prompt(self) -> ChatPromptTemplate:
@@ -100,7 +101,12 @@ If you are providing a final answer, use the "Final Answer" action. The availabl
         if not intermediate_steps:
             return []
         
-        return format_log_to_messages(intermediate_steps)
+        messages = []
+        for action, observation in intermediate_steps:
+            messages.append(HumanMessage(content=str(action)))
+            messages.append(AIMessage(content=str(observation)))
+        
+        return messages
     
     @abstractmethod
     def _get_system_prompt(self) -> str:
@@ -112,18 +118,26 @@ If you are providing a final answer, use the "Final Answer" action. The availabl
         try:
             logger.debug(f"Executing agent with input: {input_text}")
             
-            result = await self.agent_executor.ainvoke({
+            chat_history = self.memory.chat_memory.messages or []
+            
+            invocation_dict = {
                 "input": input_text,
-                "chat_history": self.memory.chat_memory.messages or []
-            })
+                "chat_history": chat_history,
+                "agent_scratchpad": self._format_agent_scratchpad([])
+            }
+            
+            logger.debug(f"Invoking agent with params: {invocation_dict}")
+            result = await self.agent_executor.ainvoke(invocation_dict)
             
             logger.debug(f"Agent execution completed successfully")
             
-            return {
+            response = {
                 "status": "success",
                 "result": result.get("output", ""),
                 "thought_process": result.get("intermediate_steps", [])
             }
+            return response
+            
         except Exception as e:
             logger.error(f"Error executing agent: {str(e)}")
             logger.exception("Full agent execution error:")
