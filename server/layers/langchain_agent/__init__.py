@@ -5,8 +5,8 @@ This layer contains the intelligent agents that interpret user commands,
 plan task execution, and coordinate with the MCP layer to execute those tasks.
 """
 
-from .base_agent import BaseAgent
+from .react_agent import BaseReactAgent
 from .browser_agent import BrowserAgent
 from .agent_orchestrator import AgentOrchestrator
 
-__all__ = ["BaseAgent", "BrowserAgent", "AgentOrchestrator"]
+__all__ = ["BaseReactAgent", "BrowserAgent", "AgentOrchestrator"]
