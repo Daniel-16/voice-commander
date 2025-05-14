@@ -41,7 +41,7 @@ export default function NotLaunched() {
             we'll make sure you're among the first beta users to experience the magic! 😁
           </p>
           <div className="w-full h-2 bg-purple-500/10 rounded-full overflow-hidden">
-            <div className="w-1/3 h-full bg-purple-500 rounded-full"></div>
+            <div className="w-1/2 h-full bg-purple-500 rounded-full"></div>
           </div>
           <p className="text-sm text-purple-400">Development in progress</p>
         </div>
