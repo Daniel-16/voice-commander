@@ -22,7 +22,7 @@ import {
   SidebarMenuButton,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { ChevronRight, Menu } from "lucide-react";
+import { ChevronRight, Menu, AlignLeft } from "lucide-react";
 
 interface ChatSidebarProps {
   isMobile?: boolean;
