@@ -117,7 +117,7 @@ function SignInContent() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between text-sm">
+            {/* <div className="flex items-center justify-between text-sm">
               <label className="flex items-center text-gray-400">
                 <input
                   type="checkbox"
@@ -135,7 +135,7 @@ function SignInContent() {
               >
                 Forgot password?
               </Link>
-            </div>
+            </div> */}
 
             <button
               type="submit"
