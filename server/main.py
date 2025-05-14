@@ -179,6 +179,20 @@ async def websocket_endpoint(websocket: WebSocket):
                 if video_urls:
                     ws_response["video_urls"] = video_urls
                     logger.info(f"Including {len(video_urls)} video URLs in WebSocket response")
+                    
+                    # Add metadata about the videos
+                    ws_response["metadata"] = {
+                        "content_type": "youtube_videos",
+                        "query": response.get("result", {}).get("query", ""),
+                        "count": len(video_urls)
+                    }
+                
+                # Add intent information if available
+                if isinstance(response, dict) and "intent" in response:
+                    intent_type = response["intent"]
+                    if "metadata" not in ws_response:
+                        ws_response["metadata"] = {}
+                    ws_response["metadata"]["intent"] = intent_type
                 
                 # Log the response for debugging
                 logger.debug(f"Sending WebSocket response: {ws_response}")

@@ -3,6 +3,7 @@ from typing import Dict, Any
 import re
 import asyncio
 from .browser_agent import BrowserAgent
+import random
 
 logger = logging.getLogger("langchain_agent.orchestrator")
 
@@ -58,12 +59,20 @@ class AgentOrchestrator:
                 video_url = f"https://www.youtube.com/watch?v={video_id}"
                 logger.info(f"Detected direct YouTube URL with video ID: {video_id}")
                 
+                # Create a more natural response for direct YouTube URLs
+                responses = [
+                    f"I see you've shared a YouTube video! Here it is: {video_url}",
+                    f"Thanks for sharing this YouTube video. I've processed it: {video_url}",
+                    f"I've extracted the YouTube video you mentioned: {video_url}",
+                    f"Here's the YouTube video you shared: {video_url}"
+                ]
+                
                 response = {
                     "intent": "youtube_direct_url",
                     "command": command,
                     "result": {
                         "status": "success",
-                        "message": f"I found this YouTube video: {video_url}",
+                        "message": random.choice(responses),
                         "video_urls": [video_url]
                     },
                     "video_urls": [video_url]

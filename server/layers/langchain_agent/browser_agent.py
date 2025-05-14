@@ -88,7 +88,7 @@ class BrowserAgent(BaseReactAgent):
                 return {
                     "status": "error",
                     "action": "youtube_search",
-                    "message": "Invalid search query provided",
+                    "message": "I need a valid search query to find videos for you. Could you please provide more details about what you're looking for?",
                     "video_urls": []
                 }
             
@@ -97,38 +97,28 @@ class BrowserAgent(BaseReactAgent):
             if query.startswith('"') and query.endswith('"'):
                 query = query[1:-1]
             
-            # Run the YouTube search - this is a synchronous call
+            # Run the YouTube search
             try:
-                # Using synchronous call to avoid coroutine issues
-                video_ids_str = self.youtube_tool.run(f"{query},1")
-                logger.info(f"YouTube search returned raw: {video_ids_str}")
-                
-                # Parse the result string to a list
-                import ast
-                video_ids = []
-                try:
-                    if isinstance(video_ids_str, str):
-                        video_ids = ast.literal_eval(video_ids_str)
-                    else:
-                        video_ids = video_ids_str
-                except Exception as parse_error:
-                    logger.error(f"Failed to parse video IDs from string: {str(parse_error)}")
-                    # Attempt direct extraction if parsing fails
-                    if isinstance(video_ids_str, str) and '[' in video_ids_str and ']' in video_ids_str:
-                        # Try simple string manipulation for common format
-                        clean_str = video_ids_str.strip('[]').replace("'", "").replace('"', '')
-                        video_ids = [v.strip() for v in clean_str.split(',')]
-                
-                logger.info(f"Parsed video IDs: {video_ids}")
+                video_ids = self.youtube_tool.run(f"{query},5")
+                logger.info(f"YouTube search returned: {video_ids}")
             except Exception as e:
                 logger.error(f"YouTube search tool error: {str(e)}")
                 return {
                     "status": "error",
                     "action": "youtube_search",
                     "query": query,
-                    "message": f"Error in YouTube search: {str(e)}",
+                    "message": f"I tried searching for videos about '{query}', but encountered an issue with YouTube. Would you like to try a different search?",
                     "video_urls": []
                 }
+            
+            # Make sure we have a valid list of video IDs
+            if isinstance(video_ids, str):
+                try:
+                    import ast
+                    video_ids = ast.literal_eval(video_ids)
+                except Exception as parse_error:
+                    logger.error(f"Failed to parse video IDs from string: {str(parse_error)}")
+                    video_ids = []
             
             if not isinstance(video_ids, list):
                 logger.warning(f"Expected list of video IDs, got {type(video_ids)}")
@@ -150,10 +140,25 @@ class BrowserAgent(BaseReactAgent):
             
             # Create a user-friendly message with the video links
             if video_urls:
-                video_links = "\n".join([f"- {url}" for url in video_urls])
-                message = f"Here are {len(video_urls)} videos for '{query}':\n{video_links}"
+                # Use more natural language with variety
+                import random
+                
+                introductions = [
+                    f"I found some great videos about {query} for you:",
+                    f"Here are some YouTube videos on {query} that I discovered:",
+                    f"Based on your search for {query}, I found these videos:", 
+                    f"I've searched YouTube and found these videos about {query}:",
+                    f"Check out these videos related to {query}:"
+                ]
+                
+                video_descriptions = []
+                for i, url in enumerate(video_urls):
+                    video_descriptions.append(f"Video {i+1}: {url}")
+                
+                video_links = "\n".join(video_descriptions)
+                message = f"{random.choice(introductions)}\n\n{video_links}\n\nDo any of these look helpful?"
             else:
-                message = f"I searched for '{query}' on YouTube but couldn't find any videos."
+                message = f"I searched for videos about '{query}' but couldn't find any matches. Would you like to try with different keywords?"
             
             result = {
                 "status": "success",
@@ -164,7 +169,6 @@ class BrowserAgent(BaseReactAgent):
             }
             
             logger.info(f"YouTube search result: {len(video_urls)} videos found")
-            # Return a dictionary with the message in plain text and video URLs
             return result
             
         except Exception as e:
@@ -174,7 +178,7 @@ class BrowserAgent(BaseReactAgent):
                 "status": "error",
                 "action": "youtube_search",
                 "query": query,
-                "message": f"Failed to search YouTube: {str(e)}",
+                "message": f"I encountered an unexpected issue while searching for '{query}' videos. Would you like to try again with a different search?",
                 "video_urls": []
             }
     
@@ -266,12 +270,31 @@ class BrowserAgent(BaseReactAgent):
                 except Exception as e:
                     logger.error(f"Error processing video ID {video_id}: {str(e)}")
             
-            # Create response message
+            # Create more agent-like response messages
             if video_urls:
-                video_links = "\n".join([f"- {url}" for url in video_urls])
-                message = f"Here are {len(video_urls)} videos for '{query}':\n{video_links}"
+                # Generate natural language responses with some variety
+                import random
+                intro_phrases = [
+                    f"I've found some great videos about {query}! Here they are:",
+                    f"Here are some YouTube videos on {query} that might help you:",
+                    f"I searched YouTube for '{query}' and found these videos:",
+                    f"Based on your interest in {query}, these videos might be helpful:",
+                    f"Check out these videos about {query}:"
+                ]
+                
+                # Add descriptions for each video
+                video_descriptions = []
+                for i, url in enumerate(video_urls):
+                    # Extract video ID for potential future enhancement to get titles
+                    video_id = url.split("watch?v=")[1] if "watch?v=" in url else url.split("/")[-1]
+                    video_descriptions.append(f"Video {i+1}: {url}")
+                
+                video_links = "\n".join(video_descriptions)
+                intro = random.choice(intro_phrases)
+                
+                message = f"{intro}\n\n{video_links}\n\nIs there anything specific from these videos you'd like to know more about?"
             else:
-                message = f"I searched for '{query}' on YouTube but couldn't find any videos."
+                message = f"I searched for videos about '{query}' on YouTube but couldn't find any relevant results. Would you like to try a different search term?"
             
             return {
                 "status": "success",
@@ -285,7 +308,7 @@ class BrowserAgent(BaseReactAgent):
             logger.exception("Full direct YouTube search error:")
             return {
                 "status": "error",
-                "message": f"Failed to search YouTube: {str(e)}",
+                "message": f"I tried searching for '{query}' on YouTube, but encountered an error. Would you like to try again or search for something else?",
                 "video_urls": [],
                 "query": query
             } 
