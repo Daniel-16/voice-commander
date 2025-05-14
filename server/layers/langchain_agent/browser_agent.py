@@ -7,14 +7,11 @@ from .react_agent import BaseReactAgent
 logger = logging.getLogger("langchain_agent.browser")
 
 class BrowserAgent(BaseReactAgent):
-    """LangChain agent for browser automation tasks"""
-    
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.youtube_tool = YouTubeSearchTool()
     
     def _get_tools(self) -> List[Tool]:
-        """Get the browser automation tools"""
         return [
             Tool(
                 name="navigate_to_url",
@@ -39,7 +36,6 @@ class BrowserAgent(BaseReactAgent):
         ]
     
     def _get_system_prompt(self) -> str:
-        """Get the system prompt for the browser agent"""
         return """
         You are a browser automation assistant that helps users navigate websites, fill forms, and perform actions in a web browser.
         
@@ -64,7 +60,6 @@ class BrowserAgent(BaseReactAgent):
         """
     
     async def _navigate_to_url(self, url: str) -> Dict[str, Any]:
-        """Navigate to a URL using the MCP tool"""
         try:
             logger.info(f"Would navigate to URL: {url}")
             return {
@@ -79,11 +74,9 @@ class BrowserAgent(BaseReactAgent):
             }
     
     async def _search_youtube(self, query: str) -> Dict[str, Any]:
-        """Search for videos on YouTube and return video links"""
         try:
             logger.info(f"Searching YouTube for: {query}")
             
-            # Make sure we have a valid query
             if not query or not isinstance(query, str):
                 return {
                     "status": "error",
@@ -92,12 +85,10 @@ class BrowserAgent(BaseReactAgent):
                     "video_urls": []
                 }
             
-            # Clean up query if needed
             query = query.strip()
             if query.startswith('"') and query.endswith('"'):
                 query = query[1:-1]
             
-            # Run the YouTube search
             try:
                 video_ids = self.youtube_tool.run(f"{query},5")
                 logger.info(f"YouTube search returned: {video_ids}")
@@ -111,7 +102,6 @@ class BrowserAgent(BaseReactAgent):
                     "video_urls": []
                 }
             
-            # Make sure we have a valid list of video IDs
             if isinstance(video_ids, str):
                 try:
                     import ast
@@ -124,7 +114,6 @@ class BrowserAgent(BaseReactAgent):
                 logger.warning(f"Expected list of video IDs, got {type(video_ids)}")
                 video_ids = []
             
-            # Convert video IDs to full URLs
             video_urls = []
             for video_id in video_ids:
                 try:
@@ -138,9 +127,7 @@ class BrowserAgent(BaseReactAgent):
                 except Exception as e:
                     logger.error(f"Error processing video ID {video_id}: {str(e)}")
             
-            # Create a user-friendly message with the video links
             if video_urls:
-                # Use more natural language with variety
                 import random
                 
                 introductions = [
@@ -183,7 +170,6 @@ class BrowserAgent(BaseReactAgent):
             }
     
     async def _fill_form(self, input_str: str) -> Dict[str, Any]:
-        """Fill a form using the MCP tool"""
         try:
             import json
             data = json.loads(input_str)
@@ -203,7 +189,6 @@ class BrowserAgent(BaseReactAgent):
             }
     
     async def _click_element(self, selector: str) -> Dict[str, Any]:
-        """Click an element using the MCP tool"""
         try:
             logger.info(f"Would click element with selector: {selector}")
             return {
@@ -218,42 +203,30 @@ class BrowserAgent(BaseReactAgent):
             }
     
     def set_mcp_client(self, mcp_client):
-        """Set the MCP client to use for tool calls"""
         self.mcp_client = mcp_client 
 
     async def direct_youtube_search(self, query: str) -> Dict[str, Any]:
-        """
-        Perform a direct YouTube search without going through agent orchestration.
-        This is a more reliable way to get YouTube video links.
-        """
         logger.info(f"Performing direct YouTube search for '{query}'")
         try:
-            # Clean up query
             query = query.strip()
             
-            # Run the YouTube search directly
             video_ids_str = self.youtube_tool.run(f"{query},5")
             logger.info(f"Direct YouTube search returned: {video_ids_str}")
             
-            # Parse the result
             import ast
             try:
                 video_ids = ast.literal_eval(video_ids_str) if isinstance(video_ids_str, str) else video_ids_str
             except Exception as parse_error:
                 logger.error(f"Failed to parse video IDs: {str(parse_error)}")
-                # Try fallback parsing
                 video_ids = []
                 if isinstance(video_ids_str, str):
                     if '[' in video_ids_str and ']' in video_ids_str:
-                        # Extract content between brackets and split by commas
                         clean_str = video_ids_str.strip()[1:-1].replace("'", "").replace('"', "")
                         video_ids = [v.strip() for v in clean_str.split(',')]
             
-            # Ensure video_ids is a list
             if not isinstance(video_ids, list):
                 video_ids = [video_ids] if video_ids else []
             
-            # Convert to full URLs
             video_urls = []
             for video_id in video_ids:
                 if not video_id:
@@ -270,9 +243,7 @@ class BrowserAgent(BaseReactAgent):
                 except Exception as e:
                     logger.error(f"Error processing video ID {video_id}: {str(e)}")
             
-            # Create more agent-like response messages
             if video_urls:
-                # Generate natural language responses with some variety
                 import random
                 intro_phrases = [
                     f"I've found some great videos about {query}! Here they are:",
@@ -282,10 +253,8 @@ class BrowserAgent(BaseReactAgent):
                     f"Check out these videos about {query}:"
                 ]
                 
-                # Add descriptions for each video
                 video_descriptions = []
                 for i, url in enumerate(video_urls):
-                    # Extract video ID for potential future enhancement to get titles
                     video_id = url.split("watch?v=")[1] if "watch?v=" in url else url.split("/")[-1]
                     video_descriptions.append(f"Video {i+1}: {url}")
                 
