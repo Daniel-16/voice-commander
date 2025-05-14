@@ -138,18 +138,53 @@ async def websocket_endpoint(websocket: WebSocket):
                     raise ValueError("Command is required")
                 
                 response = await app.state.agent_orchestrator.process_command(command, thread_id=thread_id)
+                logger.debug(f"Agent response: {response}")
                 
-                if hasattr(response, 'content'):
-                    response_content = response.content
-                elif isinstance(response, (list, tuple)) and len(response) > 0 and hasattr(response[-1], 'content'):
-                    response_content = response[-1].content
+                # Extract the video URLs if present
+                video_urls = None
+                if isinstance(response, dict):
+                    # Check top level
+                    if "video_urls" in response:
+                        video_urls = response["video_urls"]
+                    # Check in result
+                    elif isinstance(response.get("result"), dict) and "video_urls" in response["result"]:
+                        video_urls = response["result"]["video_urls"]
+                
+                # Extract the message content
+                message_content = ""
+                if isinstance(response, dict):
+                    if "intent" in response and response["intent"] == "youtube_search":
+                        # Format YouTube search results nicely
+                        if isinstance(response.get("result"), dict):
+                            message_content = response["result"].get("message", "")
+                    elif isinstance(response.get("result"), dict):
+                        if "message" in response["result"]:
+                            message_content = response["result"]["message"]
+                        elif "result" in response["result"]:
+                            message_content = response["result"]["result"]
+                        else:
+                            message_content = str(response["result"])
+                    else:
+                        message_content = str(response.get("result", response))
                 else:
-                    response_content = str(response)
+                    message_content = str(response)
                 
-                await websocket.send_text(json.dumps({
+                # Prepare the WebSocket response
+                ws_response = {
                     "type": "response",
-                    "data": response_content
-                }))
+                    "data": message_content
+                }
+                
+                # Add video_urls if found
+                if video_urls:
+                    ws_response["video_urls"] = video_urls
+                    logger.info(f"Including {len(video_urls)} video URLs in WebSocket response")
+                
+                # Log the response for debugging
+                logger.debug(f"Sending WebSocket response: {ws_response}")
+                
+                # Send the response
+                await websocket.send_text(json.dumps(ws_response))
                     
             except json.JSONDecodeError:
                 logger.error("Invalid JSON format received")

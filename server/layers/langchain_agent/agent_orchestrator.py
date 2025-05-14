@@ -7,20 +7,14 @@ from .browser_agent import BrowserAgent
 logger = logging.getLogger("langchain_agent.orchestrator")
 
 class AgentOrchestrator:
-    """
-    Orchestrates and coordinates different specialized agents
-    to handle user commands based on their intent
-    """
-    
     def __init__(self):
-        """Initialize the orchestrator with specialized agents"""
         self.browser_agent = BrowserAgent()
         self._cleanup_tasks = set()
         
         self._intent_patterns = {
             "browser": [
                 r"browse|navigate|go to|open.*website|visit|url|web page",
-                r"search.*youtube|play.*video|watch.*video",
+                r"search.*youtube|play.*video|watch.*video", 
                 r"fill.*form|input.*field|enter.*data",
                 r"click.*button|click.*link|press.*button",
                 r"screenshot|capture.*screen"
@@ -36,13 +30,9 @@ class AgentOrchestrator:
         logger.info("Agent Orchestrator initialized")
     
     def set_mcp_client(self, mcp_client):
-        """Set the MCP client for all agents"""
         self.browser_agent.set_mcp_client(mcp_client)
     
     def _detect_intent(self, command: str) -> str:
-        """
-        Detect the intent of a user command
-        """
         command = command.lower()
         
         for intent_type, patterns in self._intent_patterns.items():
@@ -55,13 +45,66 @@ class AgentOrchestrator:
         return "general"
     
     async def process_command(self, command: str, thread_id: str = None) -> Dict[str, Any]:
-        """
-        Process a user command
-        """
         try:
             logger.info(f"Processing command: {command}")
             
             intent = self._detect_intent(command)
+            
+            youtube_url_pattern = r'(https?://)?(www\.)?(youtube|youtu|youtube-nocookie)\.(com|be)/(watch\?v=|embed/|v/|.+\?v=)?([^&=%\?\s]{11})'
+            youtube_url_match = re.search(youtube_url_pattern, command)
+            
+            if youtube_url_match:
+                video_id = youtube_url_match.group(6)
+                video_url = f"https://www.youtube.com/watch?v={video_id}"
+                logger.info(f"Detected direct YouTube URL with video ID: {video_id}")
+                
+                response = {
+                    "intent": "youtube_direct_url",
+                    "command": command,
+                    "result": {
+                        "status": "success",
+                        "message": f"I found this YouTube video: {video_url}",
+                        "video_urls": [video_url]
+                    },
+                    "video_urls": [video_url]
+                }
+                
+                return response
+            
+            is_youtube_search = any(term in command.lower() for term in [
+                "youtube video", "watch video", "find video", "search video", 
+                "tutorial video", "youtube tutorial", "youtube search"
+            ]) or (
+                "youtube" in command.lower() and any(term in command.lower() for term in [
+                    "search", "find", "watch", "video", "tutorial"
+                ])
+            )
+            
+            if is_youtube_search:
+                logger.info(f"Detected YouTube search in command: {command}")
+                query = command.lower()
+                for prefix in ["youtube", "video", "tutorial", "search", "find", "watch"]:
+                    query = query.replace(prefix, "")
+                query = query.strip()
+                
+                if len(query) < 3:
+                    query = command
+                
+                logger.info(f"Extracted YouTube search query: {query}")
+                
+                result = await self.browser_agent.direct_youtube_search(query)
+                
+                response = {
+                    "intent": "youtube_search",
+                    "command": command,
+                    "result": result
+                }
+                
+                if "video_urls" in result:
+                    response["video_urls"] = result["video_urls"]
+                    logger.info(f"Added {len(result['video_urls'])} video URLs to response")
+                
+                return response
             
             if intent == "browser":
                 result = await self.browser_agent.execute(command, thread_id=thread_id)
@@ -69,11 +112,17 @@ class AgentOrchestrator:
                 logger.info(f"Using browser agent for general command: {command}")
                 result = await self.browser_agent.execute(command, thread_id=thread_id)
             
-            return {
+            response = {
                 "intent": intent,
                 "command": command,
                 "result": result
             }
+            
+            if isinstance(result, dict) and "video_urls" in result:
+                response["video_urls"] = result["video_urls"]
+                logger.info(f"Propagating {len(result['video_urls'])} video URLs to response")
+            
+            return response
         except Exception as e:
             logger.error(f"Error processing command: {str(e)}")
             logger.exception("Full command processing error:")
@@ -84,7 +133,6 @@ class AgentOrchestrator:
             }
     
     async def cleanup(self):
-        """Cleanup any pending tasks"""
         try:
             for task in self._cleanup_tasks:
                 if not task.done():
@@ -95,4 +143,4 @@ class AgentOrchestrator:
         except Exception as e:
             logger.error(f"Error during cleanup: {str(e)}")
         finally:
-            self._cleanup_tasks.clear() 
+            self._cleanup_tasks.clear()
