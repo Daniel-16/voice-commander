@@ -57,9 +57,7 @@ class AgentOrchestrator:
             if youtube_url_match:
                 video_id = youtube_url_match.group(6)
                 video_url = f"https://www.youtube.com/watch?v={video_id}"
-                logger.info(f"Detected direct YouTube URL with video ID: {video_id}")
-                
-                # Create a more natural response for direct YouTube URLs
+                logger.info(f"Detected direct YouTube URL with video ID: {video_id}")                
                 responses = [
                     f"I see you've shared a YouTube video! Here it is: {video_url}",
                     f"Thanks for sharing this YouTube video. I've processed it: {video_url}",
