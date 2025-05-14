@@ -5,7 +5,6 @@ import json
 import threading
 import asyncio
 import signal
-import os
 import sys
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,7 +32,6 @@ shutdown_requested = False
 shutdown_lock = threading.Lock()
 
 def handle_sigterm(*args):
-    """Handle SIGTERM signal by marking shutdown requested"""
     global shutdown_requested
     with shutdown_lock:
         shutdown_requested = True
@@ -44,7 +42,6 @@ signal.signal(signal.SIGTERM, handle_sigterm)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifecycle manager for the FastAPI application"""
     global mcp_client, mcp_thread, mcp_connector
     
     logger.info("Starting Alris server with layered architecture")
@@ -118,7 +115,6 @@ app.add_middleware(
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    """WebSocket endpoint for real-time communication"""
     logger.info("Received WebSocket connection")
     await websocket.accept()
     
@@ -138,18 +134,56 @@ async def websocket_endpoint(websocket: WebSocket):
                     raise ValueError("Command is required")
                 
                 response = await app.state.agent_orchestrator.process_command(command, thread_id=thread_id)
+                logger.debug(f"Agent response: {response}")
                 
-                if hasattr(response, 'content'):
-                    response_content = response.content
-                elif isinstance(response, (list, tuple)) and len(response) > 0 and hasattr(response[-1], 'content'):
-                    response_content = response[-1].content
+                video_urls = None
+                if isinstance(response, dict):
+                    if "video_urls" in response:
+                        video_urls = response["video_urls"]
+                    elif isinstance(response.get("result"), dict) and "video_urls" in response["result"]:
+                        video_urls = response["result"]["video_urls"]
+                
+                message_content = ""
+                if isinstance(response, dict):
+                    if "intent" in response and response["intent"] == "youtube_search":
+                        if isinstance(response.get("result"), dict):
+                            message_content = response["result"].get("message", "")
+                    elif isinstance(response.get("result"), dict):
+                        if "message" in response["result"]:
+                            message_content = response["result"]["message"]
+                        elif "result" in response["result"]:
+                            message_content = response["result"]["result"]
+                        else:
+                            message_content = str(response["result"])
+                    else:
+                        message_content = str(response.get("result", response))
                 else:
-                    response_content = str(response)
+                    message_content = str(response)
                 
-                await websocket.send_text(json.dumps({
+                ws_response = {
                     "type": "response",
-                    "data": response_content
-                }))
+                    "data": message_content
+                }
+                
+                if video_urls:
+                    ws_response["video_urls"] = video_urls
+                    logger.info(f"Including {len(video_urls)} video URLs in WebSocket response")
+                    
+                ws_response["metadata"] = {
+                    "content_type": "youtube_videos",
+                    "query": response.get("result", {}).get("query", ""),
+                    "count": len(video_urls)
+                }
+                
+                if isinstance(response, dict) and "intent" in response:
+                    intent_type = response["intent"]
+                    if "metadata" not in ws_response:
+                        ws_response["metadata"] = {}
+                    ws_response["metadata"]["intent"] = intent_type
+                
+                logger.debug(f"Sending WebSocket response: {ws_response}")
+                
+                await websocket.send_text(json.dumps(ws_response))
                     
             except json.JSONDecodeError:
                 logger.error("Invalid JSON format received")
@@ -177,7 +211,6 @@ async def websocket_endpoint(websocket: WebSocket):
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
     logger.info("Health check requested")
     
     mcp_status = "running" if app.state.mcp_thread and app.state.mcp_thread.is_alive() else "stopped"

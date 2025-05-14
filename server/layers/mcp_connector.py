@@ -7,7 +7,6 @@ from mcp.server import MCPServer
 logger = logging.getLogger("mcp_connector")
 
 class AlrisMCPClient(MCPClient):
-    """Custom MCP client implementation"""
     
     def __init__(self):
         super().__init__()
@@ -15,7 +14,6 @@ class AlrisMCPClient(MCPClient):
         self._cleanup_tasks = set()
     
     async def connect(self) -> bool:
-        """Connect to the MCP server"""
         try:
             await self.start()
             self.connected = True
@@ -25,7 +23,6 @@ class AlrisMCPClient(MCPClient):
             return False
     
     async def disconnect(self):
-        """Disconnect from the MCP server"""
         try:
             for task in self._cleanup_tasks:
                 if not task.done():
@@ -42,9 +39,7 @@ class AlrisMCPClient(MCPClient):
         finally:
             self._cleanup_tasks.clear()
 
-class MCPConnector:
-    """Connector for MCP server and tools"""
-    
+class MCPConnector:    
     def __init__(self):
         self.server = MCPServer()
         self.tools = {}
@@ -52,7 +47,6 @@ class MCPConnector:
         self._server_task = None
     
     def run(self):
-        """Run the MCP server in the current thread"""
         try:
             self._running = True
             self.server.run()
@@ -62,7 +56,6 @@ class MCPConnector:
             self._running = False
     
     async def shutdown(self):
-        """Shutdown the MCP server gracefully"""
         try:
             self._running = False
             

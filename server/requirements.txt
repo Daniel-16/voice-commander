@@ -18,3 +18,4 @@ mcp-python>=0.1.0
 pytest
 pytest-asyncio
 httpx
+youtube_search>=2.1.2
