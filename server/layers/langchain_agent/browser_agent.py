@@ -67,15 +67,28 @@ class BrowserAgent(BaseReactAgent):
         """Search for a video on YouTube using the MCP tool"""
         try:
             logger.info(f"Would search YouTube for: {query}")
-            result = {
-                "status": "success",
-                "message": f"Searched and played YouTube video for '{query}'"
-            }
+            if hasattr(self, 'mcp_client') and self.mcp_client:
+                await self.mcp_client.search_youtube(query)
+                result = {
+                    "status": "success",
+                    "action": "youtube_search",
+                    "query": query,
+                    "message": f"Successfully searched and played YouTube video for '{query}'"
+                }
+            else:
+                result = {
+                    "status": "error",
+                    "action": "youtube_search",
+                    "query": query,
+                    "message": "MCP client not initialized"
+                }
             return result
         except Exception as e:
             logger.error(f"Failed to search YouTube: {str(e)}")
             return {
                 "status": "error",
+                "action": "youtube_search",
+                "query": query,
                 "message": f"Failed to search YouTube: {str(e)}"
             }
     

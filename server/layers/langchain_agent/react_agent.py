@@ -64,15 +64,31 @@ class BaseReactAgent(ABC):
             
             logger.debug("Agent execution completed successfully")
             
-            if isinstance(result, dict) and "messages" in result:
-                last_message = result["messages"][-1] if result["messages"] else None
-                response = {
-                    "status": "success",
-                    "result": last_message.content if last_message else "",
-                    "messages": result["messages"]
-                }
-                return response
-            
+            if isinstance(result, dict):
+                if "messages" in result:
+                    last_message = result["messages"][-1] if result["messages"] else None
+                    tool_outputs = [msg for msg in result["messages"] if hasattr(msg, 'tool_call_id')]
+                    
+                    response = {
+                        "status": "success",
+                        "result": last_message.content if last_message else "",
+                        "messages": result["messages"],
+                        "tool_outputs": [
+                            {
+                                "tool": msg.name,
+                                "output": msg.content
+                            } for msg in tool_outputs
+                        ] if tool_outputs else []
+                    }
+                    return response
+                else:
+                    response = {
+                        "status": "success",
+                        "result": result.get("message", str(result)),
+                        "action": result.get("action", "unknown"),
+                        "messages": []
+                    }
+                    return response
             response = {
                 "status": "success",
                 "result": str(result),
@@ -85,5 +101,7 @@ class BaseReactAgent(ABC):
             logger.exception("Full agent execution error:")
             return {
                 "status": "error", 
-                "message": f"Failed to execute agent: {str(e)}"
+                "error_type": type(e).__name__,
+                "message": str(e),
+                "details": f"Failed to execute agent: {str(e)}"
             } 
