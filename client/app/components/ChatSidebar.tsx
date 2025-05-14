@@ -23,6 +23,14 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { ChevronRight, Menu, AlignLeft } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ChatSidebarProps {
   isMobile?: boolean;
@@ -30,7 +38,6 @@ interface ChatSidebarProps {
 
 const ChatSidebar = ({ isMobile = false }: ChatSidebarProps) => {
   const { signOut, user } = useAuth();
-  const [showLogout, setShowLogout] = React.useState(false);
 
   return (
     <SidebarProvider defaultOpen={!isMobile}>
@@ -40,38 +47,13 @@ const ChatSidebar = ({ isMobile = false }: ChatSidebarProps) => {
         </SidebarTrigger>
       )}
       <Sidebar className="bg-[#18181B]">
-        {/* <SidebarHeader>
-          <div
-            className="flex items-center w-full cursor-pointer px-4"
-            onMouseEnter={() => setShowLogout(true)}
-            onMouseLeave={() => setShowLogout(false)}
-          >
-            <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white text-sm mr-3">
-              {user?.email?.[0].toUpperCase() || "D"}
-            </div>
-            <div className="flex-1">
-              <div className="text-sm text-white font-medium">
-                {user?.user_metadata?.full_name}
-              </div>
-              {showLogout && (
-                <button
-                  onClick={signOut}
-                  className="text-xs text-red-500 hover:text-red-400 transition-colors mt-0.5"
-                >
-                  Log out
-                </button>
-              )}
-            </div>
-          </div>
-        </SidebarHeader> */}
-
         <SidebarContent>
           <SidebarGroup>
-            <SidebarGroupLabel className="text-gray-400 uppercase tracking-wider px-3">
+            <SidebarGroupLabel className="text-gray-400 uppercase tracking-wider px-3 font-bold mb-2">
               Tools
             </SidebarGroupLabel>
             <SidebarMenu>
-              <SidebarMenuItem>
+              <SidebarMenuItem className="mb-2">
                 <SidebarMenuButton className="bg-blue-500/10" isActive>
                   <FaYoutube className="w-4 h-4 text-red-500" />
                   <span className="text-gray-300">YouTube Tools</span>
@@ -81,7 +63,7 @@ const ChatSidebar = ({ isMobile = false }: ChatSidebarProps) => {
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
-              <SidebarMenuItem>
+              <SidebarMenuItem className="mb-2">
                 <SidebarMenuButton>
                   <FaEnvelope className="w-4 h-4 text-gray-400" />
                   <span className="text-gray-400">Gmail</span>
@@ -91,7 +73,7 @@ const ChatSidebar = ({ isMobile = false }: ChatSidebarProps) => {
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
-              <SidebarMenuItem>
+              <SidebarMenuItem className="mb-2">
                 <SidebarMenuButton>
                   <FaCalendar className="w-4 h-4 text-gray-400" />
                   <span className="text-gray-400">Google Calendar</span>
@@ -101,7 +83,7 @@ const ChatSidebar = ({ isMobile = false }: ChatSidebarProps) => {
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
-              <SidebarMenuItem>
+              <SidebarMenuItem className="mb-2">
                 <SidebarMenuButton>
                   <FaTwitter className="w-4 h-4 text-gray-400" />
                   <span className="text-gray-400">X</span>
@@ -111,7 +93,7 @@ const ChatSidebar = ({ isMobile = false }: ChatSidebarProps) => {
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
-              <SidebarMenuItem>
+              <SidebarMenuItem className="mb-2">
                 <SidebarMenuButton>
                   <FaGoogleDrive className="w-4 h-4 text-gray-400" />
                   <span className="text-gray-400">Google Drive</span>
@@ -124,21 +106,32 @@ const ChatSidebar = ({ isMobile = false }: ChatSidebarProps) => {
           </SidebarGroup>
         </SidebarContent>
 
-        <SidebarFooter className="border-t border-gray-800">
-          <div className="flex items-center gap-3 p-4">
-            <div className="px-2.5 py-1 rounded-full flex items-center justify-center text-white" style={{backgroundColor: user?.user_metadata?.color || '#4F46E5'}}>
-              {user?.user_metadata?.full_name?.charAt(0).toUpperCase()}
-            </div>
-            <div className="flex-1">
-              <div className="text-sm text-gray-400 font-medium">
-                {user?.user_metadata?.full_name}
+        <SidebarFooter className="border-t border-gray-800 rounded-md">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className="flex items-center rounded-lg gap-3 p-4 cursor-pointer hover:bg-gray-800/50">
+                <div className="px-2.5 py-1 rounded-full flex items-center justify-center text-white" style={{backgroundColor: user?.user_metadata?.color || '#4F46E5'}}>
+                  {user?.user_metadata?.full_name?.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm text-gray-400 font-medium">
+                    {user?.user_metadata?.full_name}
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-400" />
               </div>
-              {/* <div className="text-xs text-gray-500">
-                {user?.email}
-              </div> */}
-            </div>
-            <ChevronRight className="w-4 h-4 text-gray-400" />
-          </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end" side="top">
+              {/* <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuSeparator /> */}
+              {/* <DropdownMenuItem>Profile</DropdownMenuItem>
+              <DropdownMenuItem>Settings</DropdownMenuItem>
+              <DropdownMenuSeparator /> */}
+              <DropdownMenuItem onClick={signOut} className="cursor-pointer text-red-500">
+                Log out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </SidebarFooter>
       </Sidebar>
     </SidebarProvider>
