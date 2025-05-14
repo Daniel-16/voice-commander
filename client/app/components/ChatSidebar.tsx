@@ -22,13 +22,13 @@ import {
   SidebarMenuButton,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { ChevronRight, Menu, AlignLeft } from "lucide-react";
+import { ChevronsUpDown, Menu, AlignLeft } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
+//   DropdownMenuLabel,
+//   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -118,7 +118,7 @@ const ChatSidebar = ({ isMobile = false }: ChatSidebarProps) => {
                     {user?.user_metadata?.full_name}
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-gray-400" />
+                <ChevronsUpDown className="w-4 h-4 text-gray-400" />
               </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end" side="top">
