@@ -29,8 +29,7 @@ class BaseReactAgent(ABC):
             model=self.llm,
             tools=self.tools,
             state_modifier=system_message,
-            checkpointer=self.memory,
-            recursion_limit=50
+            checkpointer=self.memory
         )
         
         logger.info(f"Initialized {self.__class__.__name__}")
