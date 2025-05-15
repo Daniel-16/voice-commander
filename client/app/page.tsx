@@ -7,8 +7,24 @@ import ExampleCommands from "./components/ExampleCommands";
 import HowToUse from "./components/HowToUse";
 import LearnMore from "./components/LearnMore";
 import Link from "next/link";
+import { useAuth } from "./utils/AuthContext";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function LandingPage() {
+  const { user } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (user) {
+      router.replace("/chat");
+    }
+  }, [user, router]);
+
+  if (user) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-[#0A0A0F] overflow-x-hidden">
       <Navbar />

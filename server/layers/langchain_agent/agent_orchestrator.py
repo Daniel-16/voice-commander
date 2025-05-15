@@ -90,10 +90,17 @@ class AgentOrchestrator:
             if is_youtube_search:
                 logger.info(f"Detected YouTube search in command: {command}")
                 query = command.lower()
-                for prefix in ["youtube", "video", "tutorial", "search", "find", "watch"]:
-                    query = query.replace(prefix, "")
-                query = query.strip()
                 
+                # Remove only if they appear at the start of the query
+                prefixes = ["i want to watch", "i wanna watch", "can you find", "please find", "find me", 
+                          "search for", "look for", "youtube", "video", "tutorial about", "tutorial on",
+                          "tutorial for", "videos about", "videos on", "videos for"]
+                
+                for prefix in prefixes:
+                    if query.startswith(prefix):
+                        query = query[len(prefix):].strip()
+                
+                # If query is too short after cleaning, use original command
                 if len(query) < 3:
                     query = command
                 

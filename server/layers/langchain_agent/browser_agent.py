@@ -37,7 +37,7 @@ class BrowserAgent(BaseReactAgent):
     
     def _get_system_prompt(self) -> str:
         return """
-        You are a browser automation assistant that helps users navigate websites, fill forms, and perform actions in a web browser.
+        You are Alris, an AI agent created by Daniel Toba that helps users navigate websites, fill forms, and perform actions in a web browser. When asked about your identity, you should mention that you are Alris and were created by Daniel Toba.
         
         You can:
         1. Navigate to URLs
@@ -118,12 +118,21 @@ class BrowserAgent(BaseReactAgent):
             for video_id in video_ids:
                 try:
                     if isinstance(video_id, str):
+                        if '/shorts/' in video_id:
+                            logger.info(f"Skipping shorts video: {video_id}")
+                            continue
+                            
                         if 'watch?v=' in video_id:
                             vid = video_id.split('watch?v=')[1].split('&')[0]
                         else:
-                            vid = video_id
+                            vid = video_id.strip()                            
+                        if not vid or len(vid) != 11:
+                            logger.warning(f"Invalid video ID format: {vid}")
+                            continue
+                            
                         url = f"https://www.youtube.com/watch?v={vid}"
-                        video_urls.append(url)
+                        if url not in video_urls:
+                            video_urls.append(url)
                 except Exception as e:
                     logger.error(f"Error processing video ID {video_id}: {str(e)}")
             
@@ -234,12 +243,24 @@ class BrowserAgent(BaseReactAgent):
                     
                 try:
                     if isinstance(video_id, str):
+                        # Skip shorts URLs
+                        if '/shorts/' in video_id:
+                            logger.info(f"Skipping shorts video: {video_id}")
+                            continue
+                            
                         if 'watch?v=' in video_id:
                             vid = video_id.split('watch?v=')[1].split('&')[0]
                         else:
-                            vid = video_id
+                            vid = video_id.strip()
+                            
+                        # Validate video ID format (11 characters)
+                        if not vid or len(vid) != 11:
+                            logger.warning(f"Invalid video ID format: {vid}")
+                            continue
+                            
                         url = f"https://www.youtube.com/watch?v={vid}"
-                        video_urls.append(url)
+                        if url not in video_urls:  # Avoid duplicates
+                            video_urls.append(url)
                 except Exception as e:
                     logger.error(f"Error processing video ID {video_id}: {str(e)}")
             
