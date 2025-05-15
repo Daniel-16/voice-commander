@@ -112,7 +112,7 @@ export default function ChatPage() {
     };
 
     return () => {
-      if (socket) {
+      if (socket && socket.readyState === WebSocket.OPEN) {
         socket.close();
       }
     };
@@ -157,10 +157,43 @@ export default function ChatPage() {
   //   );
   // }
 
-  const handleSendMessage = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const errorAlert = error && (
+    <motion.div
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mb-4"
+    >
+      <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 flex items-start">
+        <div className="flex-shrink-0 mt-0.5">
+          <svg
+            className="h-5 w-5 text-red-500"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </div>
+        <div className="ml-3">
+          <p className="text-sm text-red-500">{error}</p>
+        </div>
+      </div>
+    </motion.div>
+  );
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && inputText.trim()) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  const handleSendMessage = async () => {
     if (!inputText.trim()) return;
-    if (!isConnected) {
+    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
       setError("Not connected to server. Please wait or refresh the page.");
       return;
     }
@@ -186,7 +219,13 @@ export default function ChatPage() {
 
     try {
       await updateMessageLimits(newValue);
-      sendMessage(inputText);
+      if (socketRef.current) {
+        socketRef.current.send(
+          JSON.stringify({
+            command: inputText,
+          })
+        );
+      }
       setInputText("");
       setTimeout(scrollToBottom, 100);
     } catch (err) {
@@ -224,9 +263,17 @@ export default function ChatPage() {
               <h1 className="text-xl font-bold md:text-4xl md:font-medium mb-6 bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">
                 What can I do for you today?
               </h1>
-              <form onSubmit={handleSendMessage} className="w-full max-w-[600px] px-4">
-                <div className="relative">
+              <div className="w-full max-w-[600px] px-4">
+                {errorAlert}
+                <form
+                  className="relative"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }}
+                >
                   <button
+                    type="button"
                     onClick={() => setShowTooltip(true)}
                     className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full transition-colors text-gray-400 opacity-50 cursor-not-allowed"
                   >
@@ -248,8 +295,9 @@ export default function ChatPage() {
                     type="text"
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
+                    onKeyDown={handleKeyDown}
                     placeholder="Play a youtube video"
-                    className="w-full px-12 py-4 bg-[#1C1C27] text-white placeholder-gray-500 text-[15px] rounded-4xl focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-all"                    
+                    className="w-full px-12 py-4 bg-[#1C1C27] text-white placeholder-gray-500 text-[15px] rounded-4xl focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-all"
                   />
                   <button
                     type="submit"
@@ -258,8 +306,8 @@ export default function ChatPage() {
                   >
                     <FaPaperPlane className="w-4 h-4" />
                   </button>
-                </div>
-              </form>
+                </form>
+              </div>
             </motion.div>
           ) : (
             <>
@@ -272,32 +320,7 @@ export default function ChatPage() {
                   height: "calc(100vh - 200px)",
                 }}
               >
-                {error && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-4 w-full"
-                  >
-                    <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 flex items-start">
-                      <div className="flex-shrink-0 mt-0.5">
-                        <svg
-                          className="h-5 w-5 text-red-500"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm text-red-500">{error}</p>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
+                {errorAlert}
                 {messages.map((message, index) => (
                   <motion.div
                     key={index}
@@ -309,11 +332,11 @@ export default function ChatPage() {
                     } mb-4 w-full`}
                   >
                     <div
-                      className={`max-w-[95%] md:max-w-[80%] rounded-full px-3 py-2 md:px-4 md:py-4 ${
+                      className={`max-w-[95%] md:max-w-[80%] rounded-lg px-3 py-2 md:px-4 md:py-4 ${
                         message.type === "user" ? "bg-blue-500" : "bg-[#1C1C27]"
                       }`}
                     >
-                      <p className="text-[13px] md:text-sm text-white">
+                      <p className="text-[13px] md:text-sm text-white break-words">
                         {message.content}
                       </p>
                     </div>
@@ -323,34 +346,45 @@ export default function ChatPage() {
                   </motion.div>
                 ))}
                 {isProcessing && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex items-start mb-4 w-full"
-                  >
-                    <div className="max-w-[95%] md:max-w-[80%] rounded-full px-3 py-2 md:px-4 md:py-4 bg-[#1C1C27]">
-                      <div className="flex items-center space-x-1.5 md:space-x-2">
-                        <div
-                          className="w-1.5 h-1.5 md:w-2 md:h-2 bg-blue-500 rounded-full animate-bounce"
-                          style={{ animationDelay: "0s" }}
-                        ></div>
-                        <div
-                          className="w-1.5 h-1.5 md:w-2 md:h-2 bg-blue-500 rounded-full animate-bounce"
-                          style={{ animationDelay: "0.2s" }}
-                        ></div>
-                        <div
-                          className="w-1.5 h-1.5 md:w-2 md:h-2 bg-blue-500 rounded-full animate-bounce"
-                          style={{ animationDelay: "0.4s" }}
-                        ></div>
+                  <>
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-start mb-4 w-full"
+                    >
+                      <div className="max-w-[95%] md:max-w-[80%] rounded-lg px-3 py-2 md:px-4 md:py-4 bg-[#1C1C27]">
+                        <div className="flex items-center space-x-1.5 md:space-x-2">
+                          <div
+                            className="w-1.5 h-1.5 md:w-2 md:h-2 bg-blue-500 rounded-full animate-bounce"
+                            style={{ animationDelay: "0s" }}
+                          ></div>
+                          <div
+                            className="w-1.5 h-1.5 md:w-2 md:h-2 bg-blue-500 rounded-full animate-bounce"
+                            style={{ animationDelay: "0.2s" }}
+                          ></div>
+                          <div
+                            className="w-1.5 h-1.5 md:w-2 md:h-2 bg-blue-500 rounded-full animate-bounce"
+                            style={{ animationDelay: "0.4s" }}
+                          ></div>
+                        </div>
                       </div>
-                    </div>
-                  </motion.div>
+                    </motion.div>
+                    <VideoGrid isLoading={true} />
+                  </>
                 )}
               </div>
 
-              <form onSubmit={handleSendMessage} className="sticky-bottom mb-4 w-full max-w-4xl px-4 mx-auto">
-                <div className="relative">
+              <div className="sticky-bottom mb-4 w-full max-w-4xl px-4 mx-auto">
+                {errorAlert}
+                <form
+                  className="relative"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }}
+                >
                   <button
+                    type="button"
                     onClick={() => setShowTooltip(true)}
                     className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full transition-colors text-gray-400 opacity-50 cursor-not-allowed"
                   >
@@ -385,6 +419,7 @@ export default function ChatPage() {
                     type="text"
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
+                    onKeyDown={handleKeyDown}
                     placeholder="Play a youtube video"
                     className="w-full py-3 px-12 md:py-4 bg-[#1C1C27] text-white placeholder-gray-500 text-[15px] rounded-4xl focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-all"
                   />
@@ -395,11 +430,11 @@ export default function ChatPage() {
                   >
                     <FaPaperPlane className="w-4 h-4" />
                   </button>
-                </div>
+                </form>
                 <p className="text-xs text-gray-500 mt-2 text-center">
                   Alris can make mistakes. Check for verification of content.
                 </p>
-              </form>
+              </div>
             </>
           )}
         </AnimatePresence>

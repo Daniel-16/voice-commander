@@ -1,16 +1,27 @@
 import React from "react";
+import VideoCardSkeleton from "./VideoCardSkeleton";
 
 interface VideoGridProps {
-  videoUrls: string[];
+  videoUrls?: string[];
+  isLoading?: boolean;
 }
 
-const VideoGrid: React.FC<VideoGridProps> = ({ videoUrls }) => {
+const VideoGrid: React.FC<VideoGridProps> = ({ videoUrls, isLoading }) => {
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 mb-4 w-full">
+        {[...Array(3)].map((_, index) => (
+          <VideoCardSkeleton key={index} />
+        ))}
+      </div>
+    );
+  }
+
   if (!videoUrls || videoUrls.length === 0) return null;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 mb-4 w-full">
       {videoUrls.map((url, index) => {
-        // Extract video ID from YouTube URL
         const videoId = url.split("v=")[1];
         if (!videoId) return null;
 
