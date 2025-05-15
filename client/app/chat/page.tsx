@@ -181,24 +181,32 @@ export default function ChatPage() {
                 <div ref={messagesEndRef} />
               </div>
 
-              <div className="sticky bottom-0 w-full bg-[#0A0A0F] py-4 px-4">
-                <div className="max-w-[900px] mx-auto relative">
+              <div className="sticky-bottom mb-4 w-full max-w-4xl px-4 mx-auto">
+                <div className="relative">
                   <button
-                    onClick={() => setIsRecording(!isRecording)}
-                    className={`absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full transition-colors ${
-                      isRecording
-                        ? "text-blue-500"
-                        : "text-gray-400 hover:text-gray-300"
-                    }`}
+                    onClick={() => setShowTooltip(true)}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full transition-colors text-gray-400 opacity-50 cursor-not-allowed"
                   >
                     <FaMicrophone className="w-4 h-4" />
                   </button>
+                  <AnimatePresence>
+                    {showTooltip && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        className="absolute left-0 bottom-full mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-lg whitespace-nowrap"
+                      >
+                        Voice command is not activated as of now
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                   <input
                     type="text"
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
-                    placeholder="Message Alris..."
-                    className="w-full px-12 py-3 bg-[#1C1C27] text-white placeholder-gray-500 text-[15px] rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-all"
+                    placeholder="Play a youtube video"
+                    className="w-full px-12 py-4 bg-[#1C1C27] text-white placeholder-gray-500 text-[15px] rounded-4xl focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-all"
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
@@ -214,6 +222,9 @@ export default function ChatPage() {
                     <FaPaperPlane className="w-4 h-4" />
                   </button>
                 </div>
+                <p className="text-xs text-gray-500 mt-2 text-center">
+                  Alris can make mistakes. Check for verification of content.
+                </p>
               </div>
             </>
           )}
