@@ -170,7 +170,7 @@ export default function ChatPage() {
                     } mb-4`}
                   >
                     <div
-                      className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                      className={`max-w-[80%] rounded-full px-4 py-4 ${
                         message.type === "user" ? "bg-blue-500" : "bg-[#1C1C27]"
                       }`}
                     >
