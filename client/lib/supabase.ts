@@ -14,7 +14,6 @@ export const updateUserMessageLimit = async (
   remainingMessages: number
 ) => {
   try {
-    // First check if the user exists in the table
     const { data: existingData, error: checkError } = await supabase
       .from("user_message_limits")
       .select("*")
@@ -26,7 +25,6 @@ export const updateUserMessageLimit = async (
       throw checkError;
     }
 
-    // If user doesn't exist, insert new record, otherwise update
     const { data, error } = await supabase
       .from("user_message_limits")
       .upsert(
@@ -57,7 +55,6 @@ export const updateUserMessageLimit = async (
 
 export const getUserMessageLimit = async (userId: string) => {
   try {
-    // First verify the user's session
     const {
       data: { session },
       error: sessionError,
@@ -71,7 +68,6 @@ export const getUserMessageLimit = async (userId: string) => {
       throw new Error("Authentication error: Please sign in");
     }
 
-    // Then try to get the message limits
     const { data, error } = await supabase
       .from("user_message_limits")
       .select("*")
@@ -83,13 +79,11 @@ export const getUserMessageLimit = async (userId: string) => {
       throw error;
     }
 
-    // If no data exists or it's time to reset
     if (
       !data ||
       new Date().getTime() - new Date(data.last_reset).getTime() >=
         24 * 60 * 60 * 1000
     ) {
-      // Create new record with default values
       const newData = await updateUserMessageLimit(userId, 3);
       return newData;
     }

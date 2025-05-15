@@ -11,6 +11,7 @@ import ChatSidebar from "../components/ChatSidebar";
 import { useAuth } from "../utils/AuthContext";
 import getSocket, { sendMessage } from "@/lib/socket";
 import VideoGrid from "@/components/VideoGrid";
+import { getMessageLimits, updateMessageLimits } from "../actions/cookies";
 // import { HiLink } from "react-icons/hi";
 
 interface Message {
@@ -37,22 +38,28 @@ export default function ChatPage() {
   const { user } = useAuth();
 
   useEffect(() => {
-    const lastResetTime = localStorage.getItem("lastMessageResetTime");
-    const storedRemainingMessages = localStorage.getItem("remainingMessages");
+    const initializeMessageLimits = async () => {
+      try {
+        const { lastResetTime, remainingMessages: storedMessages } =
+          await getMessageLimits();
 
-    if (lastResetTime) {
-      const timeDiff = Date.now() - parseInt(lastResetTime);
-      if (timeDiff >= 24 * 60 * 60 * 1000) {
-        setRemainingMessages(3);
-        localStorage.setItem("remainingMessages", "3");
-        localStorage.setItem("lastMessageResetTime", Date.now().toString());
-      } else if (storedRemainingMessages) {
-        setRemainingMessages(parseInt(storedRemainingMessages));
+        if (lastResetTime) {
+          const timeDiff = Date.now() - parseInt(lastResetTime);
+          if (timeDiff >= 24 * 60 * 60 * 1000) {
+            setRemainingMessages(3);
+            await updateMessageLimits(3);
+          } else if (storedMessages) {
+            setRemainingMessages(parseInt(storedMessages));
+          }
+        } else {
+          await updateMessageLimits(3);
+        }
+      } catch (err) {
+        console.error("Error initializing message limits:", err);
       }
-    } else {
-      localStorage.setItem("lastMessageResetTime", Date.now().toString());
-      localStorage.setItem("remainingMessages", "3");
-    }
+    };
+
+    initializeMessageLimits();
   }, []);
 
   useEffect(() => {
@@ -132,7 +139,8 @@ export default function ChatPage() {
 
   const scrollToBottom = () => {
     if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      chatContainerRef.current.scrollTop =
+        chatContainerRef.current.scrollHeight;
     }
   };
 
@@ -140,16 +148,16 @@ export default function ChatPage() {
     scrollToBottom();
   }, [messages]);
 
-  if (isProd) {
-    return (
-      <>
-        <ChatNavbar />
-        <NotLaunched />
-      </>
-    );
-  }
+  // if (isProd) {
+  //   return (
+  //     <>
+  //       <ChatNavbar />
+  //       <NotLaunched />
+  //     </>
+  //   );
+  // }
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputText.trim()) return;
     if (!isConnected) {
       setError("Not connected to server. Please wait or refresh the page.");
@@ -171,16 +179,15 @@ export default function ChatPage() {
     setMessages((prev) => [...prev, newMessage]);
     setIsProcessing(true);
     setError(null);
-    setRemainingMessages((prev) => {
-      const newValue = prev - 1;
-      localStorage.setItem("remainingMessages", newValue.toString());
-      return newValue;
-    });
+
+    const newValue = remainingMessages - 1;
+    setRemainingMessages(newValue);
 
     try {
+      await updateMessageLimits(newValue);
       sendMessage(inputText);
       setInputText("");
-      setTimeout(scrollToBottom, 100); // Add this line to scroll after sending a message
+      setTimeout(scrollToBottom, 100);
     } catch (err) {
       setError("Failed to send message. Please try again.");
       setIsProcessing(false);
