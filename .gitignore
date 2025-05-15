@@ -47,3 +47,6 @@ coverage/
 
 # Alris Architecture Summary and Role-Play
 Alris Architecture Summary and Role-Play.markdown
+
+# Supabase message sql
+create_message_limits.sql
