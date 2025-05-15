@@ -16,6 +16,17 @@ const config: NextConfig = {
       },
     },
   },
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination:
+          process.env.NODE_ENV === "production"
+            ? "https://alris-bmkl.onrender.com/:path*"
+            : "http://localhost:8000/:path*",
+      },
+    ];
+  },
 };
 
 const withPWAConfig = withPWA({
