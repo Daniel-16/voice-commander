@@ -157,7 +157,8 @@ export default function ChatPage() {
   //   );
   // }
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     if (!inputText.trim()) return;
     if (!isConnected) {
       setError("Not connected to server. Please wait or refresh the page.");
@@ -223,7 +224,7 @@ export default function ChatPage() {
               <h1 className="text-xl font-bold md:text-4xl md:font-medium mb-6 bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">
                 What can I do for you today?
               </h1>
-              <div className="w-full max-w-[600px] px-4">
+              <form onSubmit={handleSendMessage} className="w-full max-w-[600px] px-4">
                 <div className="relative">
                   <button
                     onClick={() => setShowTooltip(true)}
@@ -248,23 +249,17 @@ export default function ChatPage() {
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     placeholder="Play a youtube video"
-                    className="w-full px-12 py-4 bg-[#1C1C27] text-white placeholder-gray-500 text-[15px] rounded-4xl focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-all"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage();
-                      }
-                    }}
+                    className="w-full px-12 py-4 bg-[#1C1C27] text-white placeholder-gray-500 text-[15px] rounded-4xl focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-all"                    
                   />
                   <button
-                    onClick={handleSendMessage}
+                    type="submit"
                     disabled={!inputText.trim()}
                     className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full transition-colors text-gray-400 hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <FaPaperPlane className="w-4 h-4" />
                   </button>
                 </div>
-              </div>
+              </form>
             </motion.div>
           ) : (
             <>
@@ -353,7 +348,7 @@ export default function ChatPage() {
                 )}
               </div>
 
-              <div className="sticky-bottom mb-4 w-full max-w-4xl px-4 mx-auto">
+              <form onSubmit={handleSendMessage} className="sticky-bottom mb-4 w-full max-w-4xl px-4 mx-auto">
                 <div className="relative">
                   <button
                     onClick={() => setShowTooltip(true)}
@@ -392,15 +387,9 @@ export default function ChatPage() {
                     onChange={(e) => setInputText(e.target.value)}
                     placeholder="Play a youtube video"
                     className="w-full py-3 px-12 md:py-4 bg-[#1C1C27] text-white placeholder-gray-500 text-[15px] rounded-4xl focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-all"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage();
-                      }
-                    }}
                   />
                   <button
-                    onClick={handleSendMessage}
+                    type="submit"
                     disabled={!inputText.trim()}
                     className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full transition-colors text-gray-400 hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -410,7 +399,7 @@ export default function ChatPage() {
                 <p className="text-xs text-gray-500 mt-2 text-center">
                   Alris can make mistakes. Check for verification of content.
                 </p>
-              </div>
+              </form>
             </>
           )}
         </AnimatePresence>
