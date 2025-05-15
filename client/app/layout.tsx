@@ -15,7 +15,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "Alris - AI Agent for your browser",
   description:
-    "Control your browser naturally with voice and text commands. Alris makes browsing effortless with powerful automation capabilities.",
+    "An automation system that transforms natural language commands into seamless task execution. Alris enables you to automate workflows, manage tasks, and control applications through simple, natural language instructions.",
   manifest: "/manifest.json",
   icons: {
     icon: "/icons/icon-192x192.png",
