@@ -22,7 +22,7 @@ import {
   SidebarMenuButton,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { ChevronsUpDown, Menu, AlignLeft } from "lucide-react";
+import { ChevronsUpDown, Menu, PanelLeft } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,12 +46,16 @@ const ChatSidebar = ({ isMobile = false }: ChatSidebarProps) => {
           <Menu className="w-6 h-6 text-gray-400" />
         </SidebarTrigger>
       )}
-      <Sidebar className="bg-[#18181B]">
+      <Sidebar className="">
         <SidebarContent>
           <SidebarGroup>
-            <SidebarGroupLabel className="text-gray-400 uppercase tracking-wider px-3 font-bold mb-2">
+            {/* <SidebarGroupLabel className="">              
+              <PanelLeft className="text-gray-200 w-6 h-6" />
+            </SidebarGroupLabel> */}
+            <SidebarGroupLabel className="text-gray-400 mt-2 px-3 font-bold mb-2 text-xl">
               Tools
             </SidebarGroupLabel>
+            <div className="h-[1px] bg-gray-700/50 my-2 mx-3"></div>
             <SidebarMenu>
               <SidebarMenuItem className="mb-2">
                 <SidebarMenuButton className="bg-blue-500/10" isActive>
