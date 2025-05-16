@@ -1,8 +1,12 @@
 import logging
+import os
+import json
+import asyncio
+import requests
 from typing import Dict, Any, Optional, List
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel
-from ..external_services import BrowserService, EmailService
+from ..external_services import BrowserService, EmailService, CalendarService, CalendarEventParams
 
 logger = logging.getLogger("mcp_connector.server")
 
@@ -26,6 +30,12 @@ class EmailParams(BaseModel):
     cc: Optional[List[str]] = None
     bcc: Optional[List[str]] = None
     is_html: bool = False
+
+class CalendarEventParams(BaseModel):
+    title: str
+    start_time: str
+    end_time: str
+    description: Optional[str] = None
 
 class MCPConnector:
     """MCP Connector that bridges agents and external services"""
@@ -126,6 +136,11 @@ class MCPConnector:
                 "status": "error",
                 "message": f"Failed to send email to {params.recipient}"
             }
+        
+        @self.mcp.tool()
+        async def schedule_calendar_event(params: CalendarEventParams) -> Dict[str, Any]:
+            """Schedule an event in Google Calendar using a pre-configured Google Apps Script."""
+            return await CalendarService.schedule_event(params)
         
         logger.info("MCP tools registered")
     
