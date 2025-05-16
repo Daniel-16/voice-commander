@@ -6,6 +6,7 @@ import threading
 import asyncio
 import signal
 import sys
+import os
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -49,20 +50,36 @@ async def lifespan(app: FastAPI):
     try:
         if mcp_connector is None:
             mcp_connector = MCPConnector()
-            logger.info("MCP connector initialized")
+            logger.info("MCP connector initialized with calendar tool registered")
         
         if mcp_thread is None or not mcp_thread.is_alive():
             mcp_thread = threading.Thread(target=mcp_connector.run, daemon=True)
             mcp_thread.start()
             logger.info("MCP connector server thread started")
+            # Give the MCP server a moment to initialize
+            await asyncio.sleep(1)
         
         if mcp_client is None:
             mcp_client = AlrisMCPClient()
-            connected = await mcp_client.connect()
-            if connected:
-                logger.info("MCP client connected successfully")
-            else:
-                logger.error("Failed to connect MCP client")
+            
+            # Try to connect with retries
+            max_retries = 3
+            retry_count = 0
+            connected = False
+            
+            while retry_count < max_retries and not connected:
+                logger.info(f"Attempting to connect MCP client (attempt {retry_count + 1}/{max_retries})")
+                connected = await mcp_client.connect()
+                
+                if connected:
+                    logger.info("MCP client connected successfully")
+                else:
+                    retry_count += 1
+                    if retry_count < max_retries:
+                        logger.warning(f"Failed to connect MCP client, retrying in 2 seconds...")
+                        await asyncio.sleep(2)
+                    else:
+                        logger.error("Failed to connect MCP client after maximum retries")
         
         agent_orchestrator = AgentOrchestrator()
         agent_orchestrator.set_mcp_client(mcp_client)
@@ -165,20 +182,17 @@ async def websocket_endpoint(websocket: WebSocket):
                     "data": message_content
                 }
                 
+                ws_response["metadata"] = {}
+                
                 if video_urls:
                     ws_response["video_urls"] = video_urls
                     logger.info(f"Including {len(video_urls)} video URLs in WebSocket response")
-                    
-                ws_response["metadata"] = {
-                    "content_type": "youtube_videos",
-                    "query": response.get("result", {}).get("query", ""),
-                    "count": len(video_urls)
-                }
+                    ws_response["metadata"]["content_type"] = "youtube_videos"
+                    ws_response["metadata"]["query"] = response.get("result", {}).get("query", "")
+                    ws_response["metadata"]["count"] = len(video_urls)
                 
                 if isinstance(response, dict) and "intent" in response:
                     intent_type = response["intent"]
-                    if "metadata" not in ws_response:
-                        ws_response["metadata"] = {}
                     ws_response["metadata"]["intent"] = intent_type
                 
                 logger.debug(f"Sending WebSocket response: {ws_response}")

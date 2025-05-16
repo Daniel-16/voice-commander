@@ -35,6 +35,7 @@ Alris follows a layered architecture with three distinct layers:
 
 - Real-time communication via WebSocket
 - Browser automation capabilities
+- Google Calendar event scheduling
 - REST API endpoints
 - AI agent integration
 - Cross-Origin Resource Sharing (CORS) support
@@ -79,7 +80,33 @@ pip install -r requirements.txt
 playwright install
 ```
 
+5. Configure environment variables in a .env file:
+
+```
+# Google Apps Script for Calendar Integration
+GOOGLE_APPS_SCRIPT_CALENDAR_URL="your-google-apps-script-url"
+```
+
 ## Running the Server
+
+### Option 1: Using the start script (Recommended)
+
+The simplest way to start the Alris server with proper MCP service initialization is to use the provided start script:
+
+```bash
+# From the server directory
+./start_alris.py
+```
+
+This script will:
+
+1. Start the MCP server as a separate process
+2. Wait for it to initialize
+3. Start the main Alris application with proper connections
+
+If you encounter any issues with calendar features, this is the recommended way to start the server.
+
+### Option 2: Manual startup
 
 Start the server using:
 
@@ -106,6 +133,18 @@ Here's an example of how Alris processes the command "Fill out the form on examp
      - Inputs "John" in the name field
      - Submits the form
 
+Another example, scheduling a calendar event:
+
+1. **LangChain Agent Layer**:
+   - Interprets the command "Schedule a meeting with the team tomorrow at 3pm for 1 hour"
+   - Identifies date/time and converts to ISO format
+2. **MCP Connector Layer**:
+   - Provides tools to the agent:
+     - `schedule_calendar_event(title="Team Meeting", start_time="2025-04-21T15:00:00", end_time="2025-04-21T16:00:00")`
+3. **External Services Layer**:
+   - Makes an API call to the Google Apps Script
+   - The script creates the event in Google Calendar
+
 ## API Endpoints
 
 ### WebSocket Endpoint
@@ -124,9 +163,65 @@ The server includes browser automation capabilities through the following tools:
 - YouTube search functionality
 - Web navigation
 
-## Error Handling
+## Calendar Integration
 
-The server implements comprehensive error handling for both WebSocket and REST endpoints, providing clear error messages in case of failures.
+The server supports Google Calendar integration through Google Apps Script. This allows Alris to schedule events in your Google Calendar directly from natural language commands.
+
+### Setup Instructions
+
+1. **Create a Google Apps Script:**
+
+   - Go to [Google Apps Script](https://script.google.com/home) and create a new project
+   - Replace the default code with the calendar integration script found in `config/calendar_setup.md`
+   - Deploy the script as a web app (Execute as yourself, Anyone can access)
+   - Copy the Web App URL
+
+2. **Configure Environment Variables:**
+
+   - Add the Google Apps Script URL to your `.env` file:
+     ```
+     GOOGLE_APPS_SCRIPT_CALENDAR_URL=https://script.google.com/macros/s/your-unique-deployment-id/exec
+     ```
+<!-- 
+3. **Testing the Integration:**
+   - Run the test script to verify the calendar integration:
+     ```bash
+     python test_calendar.py
+     ```
+   - If successful, you should see a test event created in your Google Calendar -->
+
+### Using Calendar Commands
+
+Once set up, you can use natural language commands to schedule events:
+
+- "Schedule a meeting for tomorrow at 3pm"
+- "Create an event called Team Standup for today at 9am"
+- "Add a calendar appointment titled Doctor visit for Friday at 2:30pm"
+- "Remind me about my dentist appointment on December 15th at 10am"
+
+The system will automatically:
+
+1. Detect the calendar intent
+2. Parse the date, time, and title information
+3. Create the event in your Google Calendar
+4. Provide confirmation that the event has been scheduled
+
+### Troubleshooting
+
+If you encounter issues with the calendar integration:
+
+1. Check that the `GOOGLE_APPS_SCRIPT_CALENDAR_URL` is correctly set in your environment
+2. Ensure your Google Apps Script is deployed as a web app with appropriate permissions
+3. Check the server logs for detailed error messages
+4. Make sure your Google account has permission to create events in your calendar
+
+The system includes a fallback mechanism that will use a simpler direct HTTP approach if the MCP server connection fails. This ensures calendar functionality works even when there are MCP configuration issues.
+
+For more detailed setup instructions, see `config/calendar_setup.md`.
+
+<!-- ## Error Handling
+
+The server implements comprehensive error handling for both WebSocket and REST endpoints, providing clear error messages in case of failures. -->
 
 ## Security
 
