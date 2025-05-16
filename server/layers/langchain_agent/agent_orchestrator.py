@@ -8,7 +8,6 @@ import random
 import datetime
 from dateutil import parser
 
-# Import our alternative calendar service
 from ..mcp_connector.alt_calendar_service import SimpleCalendarService
 
 logger = logging.getLogger("langchain_agent.orchestrator")
@@ -58,18 +57,15 @@ class AgentOrchestrator:
         logger.info(f"Handling calendar intent for command: {command}")
         
         try:
-            # Extract event details from the command
             title_match = re.search(r'(?:schedule|create|add|make)\s+(?:an?|the)?\s*(?:meeting|event|appointment|reminder)(?:\s+(?:titled|called|named|about|for))?\s*["\']?([^"\']+?)["\']?(?:\s+(?:on|at|for|by))', command, re.IGNORECASE)
             
             title = ""
             if title_match:
                 title = title_match.group(1).strip()
             else:
-                # Try alternative pattern for "Schedule a meeting" type commands without explicit title
                 meeting_type_match = re.search(r'(?:schedule|create|add|make)\s+(?:an?|the)?\s*([a-zA-Z\s]+?)(?:\s+(?:on|at|for|by))', command, re.IGNORECASE)
                 if meeting_type_match:
                     meeting_type = meeting_type_match.group(1).strip()
-                    # Only use as title if it's a known meeting type word
                     if any(word in meeting_type.lower() for word in ["meeting", "appointment", "event", "call", "reminder"]):
                         title = meeting_type.capitalize()
                     else:
@@ -77,28 +73,22 @@ class AgentOrchestrator:
                 else:
                     title = "Meeting"
             
-            # Default to today if no specific date mentioned
             today = datetime.datetime.now()
             start_time = today
             end_time = today + datetime.timedelta(hours=1)
             
-            # Extract date/time information
             time_pattern = r'(?:at|by|on|for)\s+([\w\s:]+(?:am|pm|AM|PM)?)'
             time_match = re.search(time_pattern, command)
             
             if time_match:
                 time_str = time_match.group(1).strip()
                 try:
-                    # Try to parse the time string
                     parsed_time = parser.parse(time_str, fuzzy=True)
                     
-                    # Make sure the parsed time is in the future
                     if parsed_time < today:
-                        # If time is earlier but hours/minutes specified, assume it's for today
                         if time_str.lower().endswith(('am', 'pm')) or ':' in time_str:
                             parsed_time = datetime.datetime.combine(today.date(), parsed_time.time())
                             
-                        # If it's still in the past, assume it's for tomorrow
                         if parsed_time < today:
                             parsed_time = parsed_time + datetime.timedelta(days=1)
                     
@@ -107,17 +97,14 @@ class AgentOrchestrator:
                 except Exception as e:
                     logger.warning(f"Failed to parse time string '{time_str}': {e}")
             
-            # Format times properly for the API
             start_time_str = start_time.strftime("%Y-%m-%dT%H:%M:%S")
             end_time_str = end_time.strftime("%Y-%m-%dT%H:%M:%S")
             
-            # Extract description if any
             description_match = re.search(r'description\s+["\']?([^"\']+)["\']?', command, re.IGNORECASE)
             description = None
             if description_match:
                 description = description_match.group(1).strip()
             
-            # Call the calendar service
             if not self.mcp_client:
                 logger.error("MCP client not available")
                 logger.info("Falling back to alternative calendar service")
@@ -125,7 +112,6 @@ class AgentOrchestrator:
             
             if not self.mcp_client.connected:
                 logger.error("MCP client not connected")
-                # Try to reconnect once
                 try:
                     logger.info("Attempting to reconnect MCP client")
                     connected = await self.mcp_client.connect()
@@ -142,7 +128,6 @@ class AgentOrchestrator:
             
             logger.info(f"Scheduling event with title: {title}, start: {start_time_str}, end: {end_time_str}")
             
-            # Call the calendar tool via MCP
             event_params = {
                 "title": title,
                 "start_time": start_time_str,
@@ -156,16 +141,12 @@ class AgentOrchestrator:
                 response = await self.mcp_client.call_tool("schedule_calendar_event", event_params)
                 logger.info(f"Calendar service response: {response}")
                 
-                # Check if response is a dictionary or if it's a CallToolResult object
                 if hasattr(response, "content"):
-                    # It's a CallToolResult object
                     response_content = response.content
-                    # If response_content is a string, try to parse it as JSON
                     if isinstance(response_content, str):
                         try:
                             response_content = json.loads(response_content)
                         except json.JSONDecodeError:
-                            # Use as is if not valid JSON
                             pass
                     
                     if isinstance(response_content, dict) and response_content.get("status") == "success":
@@ -173,7 +154,6 @@ class AgentOrchestrator:
                     else:
                         status = "error"
                 else:
-                    # It's a dictionary (old style)
                     status = response.get("status")
                 
                 if status == "success":
@@ -182,7 +162,6 @@ class AgentOrchestrator:
                         "result": f"I've scheduled an event titled '{title}' starting at {start_time.strftime('%I:%M %p on %A, %B %d')} and ending at {end_time.strftime('%I:%M %p')}."
                     }
                 else:
-                    # Falling back to alternative service
                     logger.info("MCP tool call didn't return success, falling back to alternative calendar service")
                     return await self._use_alternative_calendar_service(title, start_time_str, end_time_str, description)
             except Exception as e:
