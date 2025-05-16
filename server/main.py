@@ -6,7 +6,6 @@ import threading
 import asyncio
 import signal
 import sys
-import os
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager

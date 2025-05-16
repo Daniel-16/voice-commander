@@ -1,8 +1,7 @@
 import logging
 import asyncio
 import os
-import sys
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from contextlib import AsyncExitStack, suppress
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -23,13 +22,9 @@ class AlrisMCPClient:
             logger.info(f"Connecting to MCP server at {self.host}:{self.port}")
             
             current_dir = os.path.dirname(os.path.abspath(__file__))
-            server_dir = os.path.abspath(os.path.join(current_dir, '..', '..'))
-            
-            # Use a dedicated MCP server script instead of main.py
-            # Check if we have an MCP server script in the current directory
+            server_dir = os.path.abspath(os.path.join(current_dir, '..', '..'))            
             mcp_server_script = os.path.join(server_dir, 'mcp_server.py')
             if not os.path.exists(mcp_server_script):
-                # Create a simple MCP server script
                 with open(mcp_server_script, 'w') as f:
                     f.write('''
 import asyncio
