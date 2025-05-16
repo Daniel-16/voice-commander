@@ -50,23 +50,6 @@ class BrowserService:
             logger.error(f"Failed to click element {selector}: {str(e)}")
             return False
     
-    async def get_text(self, selector: str) -> Optional[str]:
-        await self.initialize()
-        try:
-            return await self._page.text_content(selector)
-        except Exception as e:
-            logger.error(f"Failed to get text from {selector}: {str(e)}")
-            return None
-    
-    async def take_screenshot(self, path: str) -> bool:
-        await self.initialize()
-        try:
-            await self._page.screenshot(path=path)
-            return True
-        except Exception as e:
-            logger.error(f"Failed to take screenshot: {str(e)}")
-            return False
-    
     async def close(self):
         if self._browser:
             await self._browser.close()
