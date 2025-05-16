@@ -182,13 +182,13 @@ The server supports Google Calendar integration through Google Apps Script. This
      ```
      GOOGLE_APPS_SCRIPT_CALENDAR_URL=https://script.google.com/macros/s/your-unique-deployment-id/exec
      ```
-
+<!-- 
 3. **Testing the Integration:**
    - Run the test script to verify the calendar integration:
      ```bash
      python test_calendar.py
      ```
-   - If successful, you should see a test event created in your Google Calendar
+   - If successful, you should see a test event created in your Google Calendar -->
 
 ### Using Calendar Commands
 
@@ -219,9 +219,9 @@ The system includes a fallback mechanism that will use a simpler direct HTTP app
 
 For more detailed setup instructions, see `config/calendar_setup.md`.
 
-## Error Handling
+<!-- ## Error Handling
 
-The server implements comprehensive error handling for both WebSocket and REST endpoints, providing clear error messages in case of failures.
+The server implements comprehensive error handling for both WebSocket and REST endpoints, providing clear error messages in case of failures. -->
 
 ## Security
 

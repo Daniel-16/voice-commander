@@ -27,7 +27,6 @@ class SimpleCalendarService:
                     "message": "Calendar service misconfigured: missing API URL"
                 }
             
-            # Prepare the payload
             payload = {
                 "title": title,
                 "startTime": start_time,
@@ -37,7 +36,6 @@ class SimpleCalendarService:
             if description:
                 payload["description"] = description
             
-            # Make the API call
             logger.info(f"Sending calendar request to Apps Script: {payload}")
             response = requests.post(
                 apps_script_url, 
