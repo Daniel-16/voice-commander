@@ -89,6 +89,25 @@ GOOGLE_APPS_SCRIPT_CALENDAR_URL="your-google-apps-script-url"
 
 ## Running the Server
 
+### Option 1: Using the start script (Recommended)
+
+The simplest way to start the Alris server with proper MCP service initialization is to use the provided start script:
+
+```bash
+# From the server directory
+./start_alris.py
+```
+
+This script will:
+
+1. Start the MCP server as a separate process
+2. Wait for it to initialize
+3. Start the main Alris application with proper connections
+
+If you encounter any issues with calendar features, this is the recommended way to start the server.
+
+### Option 2: Manual startup
+
 Start the server using:
 
 ```bash
@@ -195,6 +214,8 @@ If you encounter issues with the calendar integration:
 2. Ensure your Google Apps Script is deployed as a web app with appropriate permissions
 3. Check the server logs for detailed error messages
 4. Make sure your Google account has permission to create events in your calendar
+
+The system includes a fallback mechanism that will use a simpler direct HTTP approach if the MCP server connection fails. This ensures calendar functionality works even when there are MCP configuration issues.
 
 For more detailed setup instructions, see `config/calendar_setup.md`.
 

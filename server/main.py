@@ -56,14 +56,30 @@ async def lifespan(app: FastAPI):
             mcp_thread = threading.Thread(target=mcp_connector.run, daemon=True)
             mcp_thread.start()
             logger.info("MCP connector server thread started")
+            # Give the MCP server a moment to initialize
+            await asyncio.sleep(1)
         
         if mcp_client is None:
             mcp_client = AlrisMCPClient()
-            connected = await mcp_client.connect()
-            if connected:
-                logger.info("MCP client connected successfully")
-            else:
-                logger.error("Failed to connect MCP client")
+            
+            # Try to connect with retries
+            max_retries = 3
+            retry_count = 0
+            connected = False
+            
+            while retry_count < max_retries and not connected:
+                logger.info(f"Attempting to connect MCP client (attempt {retry_count + 1}/{max_retries})")
+                connected = await mcp_client.connect()
+                
+                if connected:
+                    logger.info("MCP client connected successfully")
+                else:
+                    retry_count += 1
+                    if retry_count < max_retries:
+                        logger.warning(f"Failed to connect MCP client, retrying in 2 seconds...")
+                        await asyncio.sleep(2)
+                    else:
+                        logger.error("Failed to connect MCP client after maximum retries")
         
         agent_orchestrator = AgentOrchestrator()
         agent_orchestrator.set_mcp_client(mcp_client)

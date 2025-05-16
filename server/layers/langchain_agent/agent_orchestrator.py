@@ -2,11 +2,14 @@ import logging
 from typing import Dict, Any
 import re
 import asyncio
+import json
 from .browser_agent import BrowserAgent
 import random
 import datetime
-import pytz
 from dateutil import parser
+
+# Import our alternative calendar service
+from ..mcp_connector.alt_calendar_service import SimpleCalendarService
 
 logger = logging.getLogger("langchain_agent.orchestrator")
 
@@ -56,13 +59,23 @@ class AgentOrchestrator:
         
         try:
             # Extract event details from the command
-            title_match = re.search(r'(?:schedule|create|add|make).*?(?:meeting|event|appointment)\s+(?:titled|called|named|about)?\s*["\']?([^"\']+)["\']?', command, re.IGNORECASE)
+            title_match = re.search(r'(?:schedule|create|add|make)\s+(?:an?|the)?\s*(?:meeting|event|appointment|reminder)(?:\s+(?:titled|called|named|about|for))?\s*["\']?([^"\']+?)["\']?(?:\s+(?:on|at|for|by))', command, re.IGNORECASE)
+            
             title = ""
             if title_match:
                 title = title_match.group(1).strip()
             else:
-                # Use a generic title if none specified
-                title = "Event from Alris"
+                # Try alternative pattern for "Schedule a meeting" type commands without explicit title
+                meeting_type_match = re.search(r'(?:schedule|create|add|make)\s+(?:an?|the)?\s*([a-zA-Z\s]+?)(?:\s+(?:on|at|for|by))', command, re.IGNORECASE)
+                if meeting_type_match:
+                    meeting_type = meeting_type_match.group(1).strip()
+                    # Only use as title if it's a known meeting type word
+                    if any(word in meeting_type.lower() for word in ["meeting", "appointment", "event", "call", "reminder"]):
+                        title = meeting_type.capitalize()
+                    else:
+                        title = "Meeting"
+                else:
+                    title = "Meeting"
             
             # Default to today if no specific date mentioned
             today = datetime.datetime.now()
@@ -107,10 +120,25 @@ class AgentOrchestrator:
             # Call the calendar service
             if not self.mcp_client:
                 logger.error("MCP client not available")
-                return {
-                    "status": "error",
-                    "result": "I can't schedule events at the moment because the calendar service is not available."
-                }
+                logger.info("Falling back to alternative calendar service")
+                return await self._use_alternative_calendar_service(title, start_time_str, end_time_str, description)
+            
+            if not self.mcp_client.connected:
+                logger.error("MCP client not connected")
+                # Try to reconnect once
+                try:
+                    logger.info("Attempting to reconnect MCP client")
+                    connected = await self.mcp_client.connect()
+                    if connected:
+                        logger.info("MCP client reconnected successfully")
+                    else:
+                        logger.error("Failed to reconnect MCP client")
+                        logger.info("Falling back to alternative calendar service")
+                        return await self._use_alternative_calendar_service(title, start_time_str, end_time_str, description)
+                except Exception as e:
+                    logger.error(f"Error reconnecting MCP client: {str(e)}")
+                    logger.info("Falling back to alternative calendar service")
+                    return await self._use_alternative_calendar_service(title, start_time_str, end_time_str, description)
             
             logger.info(f"Scheduling event with title: {title}, start: {start_time_str}, end: {end_time_str}")
             
@@ -124,25 +152,73 @@ class AgentOrchestrator:
             if description:
                 event_params["description"] = description
                 
-            response = await self.mcp_client.call_tool("schedule_calendar_event", event_params)
-            logger.info(f"Calendar service response: {response}")
-            
-            if response.get("status") == "success":
-                return {
-                    "status": "success",
-                    "result": f"I've scheduled an event titled '{title}' starting at {start_time.strftime('%I:%M %p on %A, %B %d')} and ending at {end_time.strftime('%I:%M %p')}."
-                }
-            else:
-                return {
-                    "status": "error",
-                    "result": f"I couldn't schedule your event. {response.get('message', 'Please check your Google Apps Script configuration.')}"
-                }
+            try:
+                response = await self.mcp_client.call_tool("schedule_calendar_event", event_params)
+                logger.info(f"Calendar service response: {response}")
+                
+                # Check if response is a dictionary or if it's a CallToolResult object
+                if hasattr(response, "content"):
+                    # It's a CallToolResult object
+                    response_content = response.content
+                    # If response_content is a string, try to parse it as JSON
+                    if isinstance(response_content, str):
+                        try:
+                            response_content = json.loads(response_content)
+                        except json.JSONDecodeError:
+                            # Use as is if not valid JSON
+                            pass
+                    
+                    if isinstance(response_content, dict) and response_content.get("status") == "success":
+                        status = "success"
+                    else:
+                        status = "error"
+                else:
+                    # It's a dictionary (old style)
+                    status = response.get("status")
+                
+                if status == "success":
+                    return {
+                        "status": "success",
+                        "result": f"I've scheduled an event titled '{title}' starting at {start_time.strftime('%I:%M %p on %A, %B %d')} and ending at {end_time.strftime('%I:%M %p')}."
+                    }
+                else:
+                    # Falling back to alternative service
+                    logger.info("MCP tool call didn't return success, falling back to alternative calendar service")
+                    return await self._use_alternative_calendar_service(title, start_time_str, end_time_str, description)
+            except Exception as e:
+                logger.error(f"Error calling MCP calendar tool: {str(e)}")
+                logger.info("Falling back to alternative calendar service")
+                return await self._use_alternative_calendar_service(title, start_time_str, end_time_str, description)
                 
         except Exception as e:
             logger.error(f"Error in calendar intent handler: {str(e)}", exc_info=True)
             return {
                 "status": "error",
                 "result": f"I had trouble scheduling your event: {str(e)}"
+            }
+    
+    async def _use_alternative_calendar_service(self, title, start_time, end_time, description=None):
+        """Use the alternative calendar service when MCP is unavailable"""
+        logger.info(f"Using alternative calendar service for event: {title}")
+        
+        result = await SimpleCalendarService.schedule_event(
+            title=title,
+            start_time=start_time,
+            end_time=end_time,
+            description=description
+        )
+        
+        if result.get("status") == "success":
+            parsed_start = parser.parse(start_time)
+            parsed_end = parser.parse(end_time)
+            return {
+                "status": "success",
+                "result": f"I've scheduled an event titled '{title}' starting at {parsed_start.strftime('%I:%M %p on %A, %B %d')} and ending at {parsed_end.strftime('%I:%M %p')}."
+            }
+        else:
+            return {
+                "status": "error",
+                "result": f"I couldn't schedule your event. {result.get('message', 'Please check your Google Apps Script configuration.')}"
             }
     
     async def process_command(self, command: str, thread_id: str = None) -> Dict[str, Any]:

@@ -16,7 +16,7 @@ class AlrisMCPClient:
         self.exit_stack = AsyncExitStack()
         self.session = None
         self.connected = False
-        self.protocol_version = "2025-03-26"
+        self.protocol_version = "v1"
         
     async def connect(self) -> bool:
         try:
@@ -24,9 +24,36 @@ class AlrisMCPClient:
             
             current_dir = os.path.dirname(os.path.abspath(__file__))
             server_dir = os.path.abspath(os.path.join(current_dir, '..', '..'))
-            server_script = os.path.join(server_dir, 'main.py')
             
-            logger.info(f"Using server script at: {server_script}")
+            # Use a dedicated MCP server script instead of main.py
+            # Check if we have an MCP server script in the current directory
+            mcp_server_script = os.path.join(server_dir, 'mcp_server.py')
+            if not os.path.exists(mcp_server_script):
+                # Create a simple MCP server script
+                with open(mcp_server_script, 'w') as f:
+                    f.write('''
+import asyncio
+import logging
+from layers.mcp_connector import MCPConnector
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler("alris_mcp_server.log")
+    ]
+)
+logger = logging.getLogger("mcp_server")
+
+if __name__ == "__main__":
+    logger.info("Starting standalone MCP server")
+    mcp_connector = MCPConnector()
+    mcp_connector.run()
+''')
+                logger.info(f"Created MCP server script at {mcp_server_script}")
+            
+            logger.info(f"Using MCP server script at: {mcp_server_script}")
             
             env = os.environ.copy()
             if 'PYTHONPATH' in env:
@@ -38,7 +65,7 @@ class AlrisMCPClient:
             
             server_params = StdioServerParameters(
                 command="python",
-                args=[server_script],
+                args=[mcp_server_script],
                 env=env
             )
             
@@ -48,12 +75,22 @@ class AlrisMCPClient:
             self.session = await self.exit_stack.enter_async_context(
                 ClientSession(
                     read_stream, 
-                    write_stream,
-                    protocol_version=self.protocol_version
+                    write_stream
                 )
             )
             
-            await self.session.initialize(protocol_version=self.protocol_version)
+            try:
+                # Try to initialize with protocol version first
+                await self.session.initialize(protocol_version=self.protocol_version)
+            except Exception as e:
+                logger.warning(f"Failed to initialize with protocol version {self.protocol_version}: {e}")
+                # Try without specifying protocol version
+                try:
+                    await self.session.initialize()
+                    logger.info("Successfully initialized without specifying protocol version")
+                except Exception as e2:
+                    logger.error(f"Also failed to initialize without protocol version: {e2}")
+                    raise e2
             
             self.connected = True
             logger.info("Connected to MCP server")
