@@ -80,11 +80,9 @@ if __name__ == "__main__":
             )
             
             try:
-                # Try to initialize with protocol version first
                 await self.session.initialize(protocol_version=self.protocol_version)
             except Exception as e:
                 logger.warning(f"Failed to initialize with protocol version {self.protocol_version}: {e}")
-                # Try without specifying protocol version
                 try:
                     await self.session.initialize()
                     logger.info("Successfully initialized without specifying protocol version")

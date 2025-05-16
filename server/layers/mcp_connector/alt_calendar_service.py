@@ -7,14 +7,12 @@ from typing import Dict, Any, Optional
 logger = logging.getLogger("alt_calendar_service")
 
 class SimpleCalendarService:
-    """A simple alternative calendar service that doesn't rely on MCP"""
     
     @staticmethod
     async def schedule_event(title: str, 
                            start_time: str, 
                            end_time: str, 
                            description: Optional[str] = None) -> Dict[str, Any]:
-        """Schedule an event in Google Calendar using Apps Script."""
         
         try:
             logger.info(f"Scheduling calendar event: {title} at {start_time}")

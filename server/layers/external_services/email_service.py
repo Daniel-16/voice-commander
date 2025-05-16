@@ -7,8 +7,6 @@ from typing import List, Optional
 logger = logging.getLogger("external_services.email")
 
 class EmailService:
-    """External service for sending emails"""
-    
     def __init__(self, smtp_server: str = None, smtp_port: int = None, 
                  username: str = None, password: str = None):
         self.smtp_server = smtp_server

@@ -246,7 +246,6 @@ class AgentOrchestrator:
                 logger.info(f"Detected YouTube search in command: {command}")
                 query = command.lower()
                 
-                # Remove only if they appear at the start of the query
                 prefixes = ["i want to watch", "i wanna watch", "can you find", "please find", "find me", 
                           "search for", "look for", "youtube", "video", "tutorial about", "tutorial on",
                           "tutorial for", "videos about", "videos on", "videos for"]
@@ -255,7 +254,6 @@ class AgentOrchestrator:
                     if query.startswith(prefix):
                         query = query[len(prefix):].strip()
                 
-                # If query is too short after cleaning, use original command
                 if len(query) < 3:
                     query = command
                 
@@ -278,7 +276,6 @@ class AgentOrchestrator:
             if intent == "browser":
                 result = await self.browser_agent.execute(command, thread_id=thread_id)
             elif intent == "calendar":
-                # Handle calendar intents with dedicated method
                 result = await self._handle_calendar_intent(command)
             else:
                 logger.info(f"Using browser agent for general command: {command}")

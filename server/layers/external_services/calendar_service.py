@@ -9,25 +9,14 @@ from pydantic import BaseModel
 logger = logging.getLogger("external_services.calendar")
 
 class CalendarEventParams(BaseModel):
-    """Parameters for creating a calendar event."""
     title: str
     start_time: str
     end_time: str
     description: Optional[str] = None
 
 class CalendarService:
-    """Service for interacting with Google Calendar via Apps Script."""
-    
     @staticmethod
     async def schedule_event(params: CalendarEventParams) -> Dict[str, Any]:
-        """Schedule an event in Google Calendar using a pre-configured Google Apps Script.
-        
-        Args:
-            params: The parameters for the event to be created
-            
-        Returns:
-            A dictionary containing status and response information
-        """
         logger.info(f"Scheduling calendar event with title: {params.title}")
         apps_script_url = os.environ.get("GOOGLE_APPS_SCRIPT_CALENDAR_URL")
         

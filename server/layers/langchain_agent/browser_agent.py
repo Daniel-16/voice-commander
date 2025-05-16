@@ -243,7 +243,6 @@ class BrowserAgent(BaseReactAgent):
                     
                 try:
                     if isinstance(video_id, str):
-                        # Skip shorts URLs
                         if '/shorts/' in video_id:
                             logger.info(f"Skipping shorts video: {video_id}")
                             continue
@@ -253,13 +252,12 @@ class BrowserAgent(BaseReactAgent):
                         else:
                             vid = video_id.strip()
                             
-                        # Validate video ID format (11 characters)
                         if not vid or len(vid) != 11:
                             logger.warning(f"Invalid video ID format: {vid}")
                             continue
                             
                         url = f"https://www.youtube.com/watch?v={vid}"
-                        if url not in video_urls:  # Avoid duplicates
+                        if url not in video_urls:
                             video_urls.append(url)
                 except Exception as e:
                     logger.error(f"Error processing video ID {video_id}: {str(e)}")
