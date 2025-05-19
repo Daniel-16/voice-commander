@@ -219,6 +219,27 @@ class BrowserAgent(BaseReactAgent):
         try:
             query = query.strip()
             
+            if self.mcp_client and self.mcp_client.connected:
+                logger.info(f"Using MCP client for YouTube search: {query}")
+                try:
+                    search_params = {"search_query": query}
+                    response = await self.mcp_client.call_tool("search_youtube", search_params)
+                    logger.info(f"MCP YouTube search response: {response}")
+                    
+                    if isinstance(response, dict) and response.get("status") == "success":
+                        return {
+                            "status": "success",
+                            "message": response.get("message", f"I found some videos about {query}"),
+                            "video_urls": response.get("video_urls", []),
+                            "query": query
+                        }
+                    logger.warning(f"MCP YouTube search failed, falling back to internal tool")
+                except Exception as e:
+                    logger.error(f"Error calling MCP YouTube search tool: {str(e)}")
+                    logger.info(f"Falling back to internal YouTube search tool")
+            else:
+                logger.info(f"MCP client not available, using internal YouTube search tool")
+            
             video_ids_str = self.youtube_tool.run(f"{query},5")
             logger.info(f"Direct YouTube search returned: {video_ids_str}")
             
@@ -274,7 +295,6 @@ class BrowserAgent(BaseReactAgent):
                 
                 video_descriptions = []
                 for i, url in enumerate(video_urls):
-                    video_id = url.split("watch?v=")[1] if "watch?v=" in url else url.split("/")[-1]
                     video_descriptions.append(f"Video {i+1}: {url}")
                 
                 video_links = "\n".join(video_descriptions)
@@ -299,4 +319,4 @@ class BrowserAgent(BaseReactAgent):
                 "message": f"I tried searching for '{query}' on YouTube, but encountered an error. Would you like to try again or search for something else?",
                 "video_urls": [],
                 "query": query
-            } 
+            }
