@@ -65,12 +65,16 @@ class AgentOrchestrator:
             else:
                 meeting_type_match = re.search(r'(?:schedule|create|add|make)\s+(?:an?|the)?\s*([a-zA-Z\s]+?)(?:\s+(?:on|at|for|by))', command, re.IGNORECASE)
                 if meeting_type_match:
-                    meeting_type = meeting_type_match.group(1).strip()
-                    if any(word in meeting_type.lower() for word in ["meeting", "appointment", "event", "call", "reminder"]):
-                        title = meeting_type.capitalize()
+                    activity_type = meeting_type_match.group(1).strip()
+                    if len(activity_type) > 0:
+                        title = activity_type.capitalize()
                     else:
                         title = "Meeting"
                 else:
+                    title = "Meeting"
+            
+            for word in ["meeting", "appointment", "event", "call", "reminder", "a", "an", "the"]:
+                if title.lower() == word:
                     title = "Meeting"
             
             today = datetime.datetime.now()
@@ -104,6 +108,8 @@ class AgentOrchestrator:
             description = None
             if description_match:
                 description = description_match.group(1).strip()
+            
+            logger.info(f"Detected event title: '{title}' for command: '{command}'")
             
             if not self.mcp_client:
                 logger.error("MCP client not available")

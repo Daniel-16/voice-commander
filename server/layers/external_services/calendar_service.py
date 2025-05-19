@@ -26,6 +26,12 @@ class CalendarService:
                 "status": "error",
                 "message": "Google Apps Script URL is not configured in the server."
             }
+                
+        if apps_script_url.endswith('%'):
+            apps_script_url = apps_script_url[:-1]
+            logger.info(f"Fixed Google Apps Script URL by removing trailing % character")
+        
+        logger.info(f"Using Google Apps Script URL: {apps_script_url}")
         
         payload = {
             "title": params.title,

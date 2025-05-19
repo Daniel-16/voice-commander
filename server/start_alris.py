@@ -21,7 +21,7 @@ logger = logging.getLogger("alris_start")
 
 processes = []
 
-def cleanup(signum, frame):
+def cleanup():
     """Clean up all subprocesses on exit."""
     logger.info("Cleaning up processes...")
     for proc in processes:

@@ -25,6 +25,13 @@ class SimpleCalendarService:
                     "message": "Calendar service misconfigured: missing API URL"
                 }
             
+            # Clean up the URL - remove any trailing % character that might have been added accidentally
+            if apps_script_url.endswith('%'):
+                apps_script_url = apps_script_url[:-1]
+                logger.info(f"Fixed Google Apps Script URL by removing trailing % character")
+            
+            logger.info(f"Using Google Apps Script URL: {apps_script_url}")
+            
             payload = {
                 "title": title,
                 "startTime": start_time,
@@ -57,7 +64,7 @@ class SimpleCalendarService:
                         "message": f"Successfully scheduled '{title}' in your calendar"
                     }
             else:
-                logger.error(f"Failed to create calendar event. Status: {response.status_code}, Response: {response.text}")
+                logger.error(f"Failed to create calendar event. Status: {response.status_code}, Response: {response.text[:100]}")
                 return {
                     "status": "error",
                     "message": f"Failed to create calendar event: {response.text[:100]}"
