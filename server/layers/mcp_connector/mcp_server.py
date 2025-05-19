@@ -54,7 +54,6 @@ class MCPConnector:
         async def navigate(params: Dict[str, Any]) -> Dict[str, Any]:
             """Navigate to a URL in the browser"""
             try:
-                # Extract url parameter from the params
                 if "url" in params:
                     url = params["url"]
                 elif "params" in params and isinstance(params["params"], dict) and "url" in params["params"]:
