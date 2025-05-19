@@ -140,11 +140,11 @@ class BrowserAgent(BaseReactAgent):
                 import random
                 
                 introductions = [
-                    f"I found some great videos about {query} for you:",
-                    f"Here are some YouTube videos on {query} that I discovered:",
-                    f"Based on your search for {query}, I found these videos:", 
-                    f"I've searched YouTube and found these videos about {query}:",
-                    f"Check out these videos related to {query}:"
+                    f"I found some great videos for you:",
+                    f"Here are some YouTube videos that I discovered:",
+                    f"Based on your search, I found these videos:", 
+                    f"I've searched YouTube and found these videos:",
+                    f"Check out these videos:"
                 ]
                 
                 video_descriptions = []

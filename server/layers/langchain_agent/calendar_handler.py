@@ -2,23 +2,14 @@ import logging
 import datetime
 import json
 import re
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from dateutil import parser
-
 from ..mcp_connector.alt_calendar_service import SimpleCalendarService
 from .title_extractor import extract_event_title_from_command
 
 logger = logging.getLogger("langchain_agent.calendar_handler")
 
 async def extract_date_time_from_command(command: str) -> tuple:
-    """Extract date and time information from a calendar command.
-    
-    Args:
-        command: The natural language command containing date/time information
-        
-    Returns:
-        A tuple of (start_time, end_time) as datetime objects
-    """
     today = datetime.datetime.now()
     start_time = today
     end_time = today + datetime.timedelta(hours=1)
@@ -46,17 +37,6 @@ async def extract_date_time_from_command(command: str) -> tuple:
     return start_time, end_time
 
 async def use_alternative_calendar_service(title, start_time, end_time, description=None):
-    """Use the alternative calendar service when MCP is unavailable.
-    
-    Args:
-        title: The event title
-        start_time: The event start time (string or datetime)
-        end_time: The event end time (string or datetime)
-        description: Optional description for the event
-        
-    Returns:
-        A dictionary with the result of the operation
-    """
     logger.info(f"Using alternative calendar service for event: {title}")
     
     result = await SimpleCalendarService.schedule_event(
@@ -80,41 +60,27 @@ async def use_alternative_calendar_service(title, start_time, end_time, descript
         }
 
 async def handle_calendar_intent(command: str, mcp_client=None) -> Dict[str, Any]:
-    """Handle calendar-related commands by parsing time information and calling calendar tools.
-    
-    Args:
-        command: The natural language command containing calendar information
-        mcp_client: The MCP client to use for scheduling events
-        
-    Returns:
-        A dictionary with the result of the operation
-    """
     logger.info(f"Handling calendar intent for command: {command}")
     
     try:
-        # Extract title using the dedicated extractor
         title = await extract_event_title_from_command(command)
         logger.info(f"Extracted event title: '{title}' for command: '{command}'")
         
-        # Extract date and time
         start_time, end_time = await extract_date_time_from_command(command)
         
         start_time_str = start_time.strftime("%Y-%m-%dT%H:%M:%S")
         end_time_str = end_time.strftime("%Y-%m-%dT%H:%M:%S")
         
-        # Extract description if available
         description_match = re.search(r'description\s+["\']?([^"\']+)["\']?', command, re.IGNORECASE)
         description = None
         if description_match:
             description = description_match.group(1).strip()
         
-        # If no MCP client, use alternative service
         if not mcp_client:
             logger.error("MCP client not available")
             logger.info("Falling back to alternative calendar service")
             return await use_alternative_calendar_service(title, start_time_str, end_time_str, description)
         
-        # If MCP client not connected, try to reconnect
         if not mcp_client.connected:
             logger.error("MCP client not connected")
             try:
@@ -131,7 +97,6 @@ async def handle_calendar_intent(command: str, mcp_client=None) -> Dict[str, Any
                 logger.info("Falling back to alternative calendar service")
                 return await use_alternative_calendar_service(title, start_time_str, end_time_str, description)
         
-        # Schedule the event using MCP
         logger.info(f"Scheduling event with title: {title}, start: {start_time_str}, end: {end_time_str}")
         
         event_params = {

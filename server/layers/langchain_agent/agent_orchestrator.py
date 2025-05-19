@@ -29,12 +29,10 @@ class AgentOrchestrator:
         try:
             logger.info(f"Processing command: {command}")
             
-            # Check for direct YouTube URL
             video_url = detect_youtube_url(command)
             if video_url:
                 return create_youtube_direct_url_response(command, video_url)
             
-            # Check for YouTube search command
             if is_youtube_search_command(command):
                 logger.info(f"Detected YouTube search in command: {command}")
                 query = extract_youtube_search_query(command)
@@ -53,7 +51,6 @@ class AgentOrchestrator:
                 
                 return response
             
-            # Detect intent for other commands
             intent = self.intent_detector.detect_intent(command)
             
             if intent == "browser":

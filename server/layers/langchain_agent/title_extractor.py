@@ -6,17 +6,8 @@ import spacy
 logger = logging.getLogger("langchain_agent.title_extractor")
 
 async def extract_event_title_from_command(command: str) -> str:
-    """Extract a meaningful event title from a calendar command using rule-based and NLP approaches.
-    
-    Args:
-        command: The natural language command containing calendar event information
-        
-    Returns:
-        A meaningful title for the calendar event
-    """
     command_lower = command.lower()
     
-    # Birthday pattern detection
     if "birthday" in command_lower:
         name_pattern = r'(?:([a-zA-Z]+)(?:\'s)?\s+birthday)|(?:birthday\s+(?:for|of)\s+([a-zA-Z]+))'
         name_match = re.search(name_pattern, command, re.IGNORECASE)
@@ -24,20 +15,17 @@ async def extract_event_title_from_command(command: str) -> str:
             name = name_match.group(1) or name_match.group(2)
             return f"{name}'s Birthday"
     
-    # Meeting pattern detection
     if "meeting" in command_lower and "about" in command_lower:
         about_pattern = r'meeting\s+(?:about|regarding|on|for)\s+([^,\.]+)'
         about_match = re.search(about_pattern, command, re.IGNORECASE)
         if about_match:
             return about_match.group(1).strip().capitalize()
     
-    # Appointment pattern detection
     if "appointment" in command_lower:
         for apt_type in ["doctor", "dentist", "medical", "therapy", "haircut", "salon"]:
             if apt_type in command_lower:
                 return f"{apt_type.capitalize()} Appointment"
     
-    # Reminder pattern detection
     if "remind" in command_lower and "of" in command_lower:
         remind_of_pattern = r'remind\s+(?:me|us|them)?\s+(?:of|about|for)\s+([^,\.]+)'
         remind_match = re.search(remind_of_pattern, command, re.IGNORECASE)
@@ -51,7 +39,6 @@ async def extract_event_title_from_command(command: str) -> str:
                             return f"{parts[i-1]}'s {person_event.capitalize()}"
             return subject.capitalize()
     
-    # Extraction based on important words
     words = command.split()
     common_words = {"remind", "me", "us", "them", "of", "about", "a", "an", "the", "on", "at", "by", "for", 
                     "create", "schedule", "add", "make", "event", "calendar", "reminder", 
@@ -68,7 +55,6 @@ async def extract_event_title_from_command(command: str) -> str:
             return best_phrase.capitalize()
         return important_words[0].capitalize()
     
-    # NLP-based extraction
     try:
         try:
             nlp = spacy.load("en_core_web_sm")
