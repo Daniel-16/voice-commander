@@ -7,6 +7,8 @@ from .browser_agent import BrowserAgent
 import random
 import datetime
 from dateutil import parser
+import spacy
+import sys
 
 from ..mcp_connector.alt_calendar_service import SimpleCalendarService
 
@@ -57,25 +59,9 @@ class AgentOrchestrator:
         logger.info(f"Handling calendar intent for command: {command}")
         
         try:
-            title_match = re.search(r'(?:schedule|create|add|make)\s+(?:an?|the)?\s*(?:meeting|event|appointment|reminder)(?:\s+(?:titled|called|named|about|for))?\s*["\']?([^"\']+?)["\']?(?:\s+(?:on|at|for|by))', command, re.IGNORECASE)
-            
-            title = ""
-            if title_match:
-                title = title_match.group(1).strip()
-            else:
-                meeting_type_match = re.search(r'(?:schedule|create|add|make)\s+(?:an?|the)?\s*([a-zA-Z\s]+?)(?:\s+(?:on|at|for|by))', command, re.IGNORECASE)
-                if meeting_type_match:
-                    activity_type = meeting_type_match.group(1).strip()
-                    if len(activity_type) > 0:
-                        title = activity_type.capitalize()
-                    else:
-                        title = "Meeting"
-                else:
-                    title = "Meeting"
-            
-            for word in ["meeting", "appointment", "event", "call", "reminder", "a", "an", "the"]:
-                if title.lower() == word:
-                    title = "Meeting"
+            # Use a prompt-based title extraction approach instead of regex patterns
+            title = await self._extract_event_title_from_command(command)
+            logger.info(f"Extracted event title: '{title}' for command: '{command}'")
             
             today = datetime.datetime.now()
             start_time = today
@@ -142,7 +128,7 @@ class AgentOrchestrator:
             
             if description:
                 event_params["description"] = description
-                
+            
             try:
                 response = await self.mcp_client.call_tool("schedule_calendar_event", event_params)
                 logger.info(f"Calendar service response: {response}")
@@ -205,6 +191,79 @@ class AgentOrchestrator:
                 "status": "error",
                 "result": f"I couldn't schedule your event. {result.get('message', 'Please check your Google Apps Script configuration.')}"
             }
+    
+    async def _extract_event_title_from_command(self, command: str) -> str:
+        """Extract a meaningful event title from a calendar command using LLM-based extraction."""
+        command_lower = command.lower()
+        
+        if "birthday" in command_lower:
+            name_pattern = r'(?:([a-zA-Z]+)(?:\'s)?\s+birthday)|(?:birthday\s+(?:for|of)\s+([a-zA-Z]+))'
+            name_match = re.search(name_pattern, command, re.IGNORECASE)
+            if name_match:
+                name = name_match.group(1) or name_match.group(2)
+                return f"{name}'s Birthday"
+        
+        if "meeting" in command_lower and "about" in command_lower:
+            about_pattern = r'meeting\s+(?:about|regarding|on|for)\s+([^,\.]+)'
+            about_match = re.search(about_pattern, command, re.IGNORECASE)
+            if about_match:
+                return about_match.group(1).strip().capitalize()
+        
+        if "appointment" in command_lower:
+            for apt_type in ["doctor", "dentist", "medical", "therapy", "haircut", "salon"]:
+                if apt_type in command_lower:
+                    return f"{apt_type.capitalize()} Appointment"
+        
+        if "remind" in command_lower and "of" in command_lower:
+            remind_of_pattern = r'remind\s+(?:me|us|them)?\s+(?:of|about|for)\s+([^,\.]+)'
+            remind_match = re.search(remind_of_pattern, command, re.IGNORECASE)
+            if remind_match:
+                subject = remind_match.group(1).strip()
+                for person_event in ["birthday", "anniversary"]:
+                    if person_event in subject.lower():
+                        parts = subject.split()
+                        for i, part in enumerate(parts):
+                            if person_event in part.lower() and i > 0:
+                                return f"{parts[i-1]}'s {person_event.capitalize()}"
+                return subject.capitalize()        
+        words = command.split()
+        common_words = {"remind", "me", "us", "them", "of", "about", "a", "an", "the", "on", "at", "by", "for", 
+                       "create", "schedule", "add", "make", "event", "calendar", "reminder", 
+                       "meeting", "appointment", "this", "next", "tomorrow", "tonight", "today"}
+        
+        important_words = [word.strip(",.!?") for word in words if word.lower() not in common_words]
+        
+        if important_words:
+            if len(important_words) >= 3:
+                best_phrase = " ".join(important_words[:3])
+                return best_phrase.capitalize()
+            elif len(important_words) >= 2:
+                best_phrase = " ".join(important_words[:2])
+                return best_phrase.capitalize()
+            return important_words[0].capitalize()
+        try:
+            try:
+                nlp = spacy.load("en_core_web_sm")
+            except OSError:
+                import subprocess
+                subprocess.check_call([sys.executable, "-m", "spacy", "download", "en_core_web_sm"])
+                nlp = spacy.load("en_core_web_sm")
+            
+            doc = nlp(command)
+            
+            entities = [ent.text for ent in doc.ents]
+            noun_chunks = [chunk.text for chunk in doc.noun_chunks]
+            
+            if entities:
+                return entities[0].capitalize()
+            
+            if noun_chunks:
+                for chunk in noun_chunks:
+                    if not any(word.lower() in common_words for word in chunk.split()):
+                        return chunk.capitalize()
+        except Exception as e:
+            logger.warning(f"NLP-based title extraction failed: {e}")        
+        return "Reminder"
     
     async def process_command(self, command: str, thread_id: str = None) -> Dict[str, Any]:
         try:
