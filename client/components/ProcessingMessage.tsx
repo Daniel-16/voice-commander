@@ -17,7 +17,7 @@ const ProcessingMessage = () => {
           style={{ animationDelay: "0.4s" }}
         />
       </div>
-      <span className="text-sm text-white">Processing...</span>
+      {/* <span className="text-sm text-white">Processing...</span> */}
     </div>
   );
 };

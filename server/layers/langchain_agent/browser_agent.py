@@ -140,11 +140,11 @@ class BrowserAgent(BaseReactAgent):
                 import random
                 
                 introductions = [
-                    f"I found some great videos about {query} for you:",
-                    f"Here are some YouTube videos on {query} that I discovered:",
-                    f"Based on your search for {query}, I found these videos:", 
-                    f"I've searched YouTube and found these videos about {query}:",
-                    f"Check out these videos related to {query}:"
+                    f"I found some great videos for you:",
+                    f"Here are some YouTube videos that I discovered:",
+                    f"Based on your search, I found these videos:", 
+                    f"I've searched YouTube and found these videos:",
+                    f"Check out these videos:"
                 ]
                 
                 video_descriptions = []
@@ -219,6 +219,27 @@ class BrowserAgent(BaseReactAgent):
         try:
             query = query.strip()
             
+            if self.mcp_client and self.mcp_client.connected:
+                logger.info(f"Using MCP client for YouTube search: {query}")
+                try:
+                    search_params = {"search_query": query}
+                    response = await self.mcp_client.call_tool("search_youtube", search_params)
+                    logger.info(f"MCP YouTube search response: {response}")
+                    
+                    if isinstance(response, dict) and response.get("status") == "success":
+                        return {
+                            "status": "success",
+                            "message": response.get("message", f"I found some videos about {query}"),
+                            "video_urls": response.get("video_urls", []),
+                            "query": query
+                        }
+                    logger.warning(f"MCP YouTube search failed, falling back to internal tool")
+                except Exception as e:
+                    logger.error(f"Error calling MCP YouTube search tool: {str(e)}")
+                    logger.info(f"Falling back to internal YouTube search tool")
+            else:
+                logger.info(f"MCP client not available, using internal YouTube search tool")
+            
             video_ids_str = self.youtube_tool.run(f"{query},5")
             logger.info(f"Direct YouTube search returned: {video_ids_str}")
             
@@ -243,7 +264,6 @@ class BrowserAgent(BaseReactAgent):
                     
                 try:
                     if isinstance(video_id, str):
-                        # Skip shorts URLs
                         if '/shorts/' in video_id:
                             logger.info(f"Skipping shorts video: {video_id}")
                             continue
@@ -253,13 +273,12 @@ class BrowserAgent(BaseReactAgent):
                         else:
                             vid = video_id.strip()
                             
-                        # Validate video ID format (11 characters)
                         if not vid or len(vid) != 11:
                             logger.warning(f"Invalid video ID format: {vid}")
                             continue
                             
                         url = f"https://www.youtube.com/watch?v={vid}"
-                        if url not in video_urls:  # Avoid duplicates
+                        if url not in video_urls:
                             video_urls.append(url)
                 except Exception as e:
                     logger.error(f"Error processing video ID {video_id}: {str(e)}")
@@ -276,7 +295,6 @@ class BrowserAgent(BaseReactAgent):
                 
                 video_descriptions = []
                 for i, url in enumerate(video_urls):
-                    video_id = url.split("watch?v=")[1] if "watch?v=" in url else url.split("/")[-1]
                     video_descriptions.append(f"Video {i+1}: {url}")
                 
                 video_links = "\n".join(video_descriptions)
@@ -301,4 +319,4 @@ class BrowserAgent(BaseReactAgent):
                 "message": f"I tried searching for '{query}' on YouTube, but encountered an error. Would you like to try again or search for something else?",
                 "video_urls": [],
                 "query": query
-            } 
+            }

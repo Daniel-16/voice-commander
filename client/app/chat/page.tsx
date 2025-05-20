@@ -12,6 +12,7 @@ import { useAuth } from "../utils/AuthContext";
 import getSocket, { sendMessage } from "@/lib/socket";
 import VideoGrid from "@/components/VideoGrid";
 import { getMessageLimits, updateMessageLimits } from "../actions/cookies";
+import ProcessingMessage from "@/components/ProcessingMessage";
 // import { HiLink } from "react-icons/hi";
 
 interface Message {
@@ -36,6 +37,7 @@ export default function ChatPage() {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<WebSocket | null>(null);
   const { user } = useAuth();
+  const [isVideoCommand, setIsVideoCommand] = useState(false);
 
   useEffect(() => {
     const initializeMessageLimits = async () => {
@@ -204,6 +206,9 @@ export default function ChatPage() {
       return;
     }
 
+    const videoRegex = /(youtube\.com|youtu\.be|play (a )?video|video)/i;
+    setIsVideoCommand(videoRegex.test(inputText));
+
     const newMessage: Message = {
       type: "user",
       content: inputText,
@@ -353,23 +358,13 @@ export default function ChatPage() {
                       className="flex items-start mb-4 w-full"
                     >
                       <div className="max-w-[95%] md:max-w-[80%] rounded-lg px-3 py-2 md:px-4 md:py-4 bg-[#1C1C27]">
-                        <div className="flex items-center space-x-1.5 md:space-x-2">
-                          <div
-                            className="w-1.5 h-1.5 md:w-2 md:h-2 bg-blue-500 rounded-full animate-bounce"
-                            style={{ animationDelay: "0s" }}
-                          ></div>
-                          <div
-                            className="w-1.5 h-1.5 md:w-2 md:h-2 bg-blue-500 rounded-full animate-bounce"
-                            style={{ animationDelay: "0.2s" }}
-                          ></div>
-                          <div
-                            className="w-1.5 h-1.5 md:w-2 md:h-2 bg-blue-500 rounded-full animate-bounce"
-                            style={{ animationDelay: "0.4s" }}
-                          ></div>
-                        </div>
+                        {isVideoCommand ? (
+                          <VideoGrid isLoading={true} />
+                        ) : (
+                          <ProcessingMessage />
+                        )}
                       </div>
                     </motion.div>
-                    <VideoGrid isLoading={true} />
                   </>
                 )}
               </div>

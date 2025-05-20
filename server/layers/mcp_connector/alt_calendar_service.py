@@ -7,14 +7,12 @@ from typing import Dict, Any, Optional
 logger = logging.getLogger("alt_calendar_service")
 
 class SimpleCalendarService:
-    """A simple alternative calendar service that doesn't rely on MCP"""
     
     @staticmethod
     async def schedule_event(title: str, 
                            start_time: str, 
                            end_time: str, 
                            description: Optional[str] = None) -> Dict[str, Any]:
-        """Schedule an event in Google Calendar using Apps Script."""
         
         try:
             logger.info(f"Scheduling calendar event: {title} at {start_time}")
@@ -26,6 +24,13 @@ class SimpleCalendarService:
                     "status": "error",
                     "message": "Calendar service misconfigured: missing API URL"
                 }
+            
+            # Clean up the URL - remove any trailing % character that might have been added accidentally
+            if apps_script_url.endswith('%'):
+                apps_script_url = apps_script_url[:-1]
+                logger.info(f"Fixed Google Apps Script URL by removing trailing % character")
+            
+            logger.info(f"Using Google Apps Script URL: {apps_script_url}")
             
             payload = {
                 "title": title,
@@ -59,7 +64,7 @@ class SimpleCalendarService:
                         "message": f"Successfully scheduled '{title}' in your calendar"
                     }
             else:
-                logger.error(f"Failed to create calendar event. Status: {response.status_code}, Response: {response.text}")
+                logger.error(f"Failed to create calendar event. Status: {response.status_code}, Response: {response.text[:100]}")
                 return {
                     "status": "error",
                     "message": f"Failed to create calendar event: {response.text[:100]}"

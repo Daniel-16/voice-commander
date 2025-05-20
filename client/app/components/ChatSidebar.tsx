@@ -158,8 +158,8 @@ const ChatSidebar = ({ isMobile = false }: ChatSidebarProps) => {
                   </svg>
                   {/* <FaCalendar className="w-4 h-4 text-gray-400" /> */}
                   <span className="text-gray-400">Google Calendar</span>
-                  <span className="ml-auto text-[10px] font-medium px-2 py-0.5 rounded-full bg-gray-700 text-gray-300">
-                    Inactive
+                  <span className="ml-auto text-[10px] font-medium px-2 py-0.5 rounded-full bg-green-500 text-black">
+                    Active
                   </span>
                 </SidebarMenuButton>
               </SidebarMenuItem>

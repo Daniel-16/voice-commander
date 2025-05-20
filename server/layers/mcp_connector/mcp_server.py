@@ -1,8 +1,4 @@
 import logging
-import os
-import json
-import asyncio
-import requests
 from typing import Dict, Any, Optional, List
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel
@@ -55,92 +51,203 @@ class MCPConnector:
         """Register all tools with the MCP server"""
         
         @self.mcp.tool()
-        async def navigate(params: NavigateParams) -> Dict[str, Any]:
+        async def navigate(params: Dict[str, Any]) -> Dict[str, Any]:
             """Navigate to a URL in the browser"""
-            success = await self.browser_service.navigate(params.url)
-            if success:
+            try:
+                if "url" in params:
+                    url = params["url"]
+                elif "params" in params and isinstance(params["params"], dict) and "url" in params["params"]:
+                    url = params["params"]["url"]
+                else:
+                    return {
+                        "status": "error",
+                        "message": "URL parameter is required"
+                    }
+                
+                success = await self.browser_service.navigate(url)
+                if success:
+                    return {
+                        "status": "success",
+                        "message": f"Successfully navigated to {url}"
+                    }
                 return {
-                    "status": "success",
-                    "message": f"Successfully navigated to {params.url}"
+                    "status": "error",
+                    "message": f"Failed to navigate to {url}"
                 }
-            return {
-                "status": "error",
-                "message": f"Failed to navigate to {params.url}"
-            }
+            except Exception as e:
+                logger.error(f"Error in navigate tool: {str(e)}")
+                return {
+                    "status": "error",
+                    "message": f"Error in navigate tool: {str(e)}"
+                }
         
         @self.mcp.tool()
-        async def search_youtube(params: YoutubeSearchParams) -> Dict[str, Any]:
+        async def search_youtube(params: Dict[str, Any]) -> Dict[str, Any]:
             """Search for a video on YouTube"""
-            query = params.search_query.replace(" ", "+")
-            url = f"https://www.youtube.com/results?search_query={query}"
-            success = await self.browser_service.navigate(url)
-            if success:
-                await self.browser_service.click_element("a#video-title")
+            try:
+                if "search_query" in params:
+                    search_query = params["search_query"]
+                elif "params" in params and isinstance(params["params"], dict) and "search_query" in params["params"]:
+                    search_query = params["params"]["search_query"]
+                else:
+                    return {
+                        "status": "error",
+                        "message": "search_query parameter is required"
+                    }
+                
+                query = search_query.replace(" ", "+")
+                url = f"https://www.youtube.com/results?search_query={query}"
+                success = await self.browser_service.navigate(url)
+                if success:
+                    await self.browser_service.click_element("a#video-title")
+                    return {
+                        "status": "success",
+                        "message": f"Successfully searched for and played YouTube video: {search_query}"
+                    }
                 return {
-                    "status": "success",
-                    "message": f"Successfully searched for and played YouTube video: {params.search_query}"
+                    "status": "error",
+                    "message": f"Failed to search YouTube for {search_query}"
                 }
-            return {
-                "status": "error",
-                "message": f"Failed to search YouTube for {params.search_query}"
-            }
+            except Exception as e:
+                logger.error(f"Error in search_youtube tool: {str(e)}")
+                return {
+                    "status": "error",
+                    "message": f"Error in search_youtube tool: {str(e)}"
+                }
         
         @self.mcp.tool()
-        async def fill_form(params: FormParams) -> Dict[str, Any]:
+        async def fill_form(params: Dict[str, Any]) -> Dict[str, Any]:
             """Fill a form with the provided data"""
-            success = await self.browser_service.fill_form(
-                params.form_data, 
-                params.selectors
-            )
-            if success:
+            try:
+                form_data = None
+                selectors = None
+                
+                if "form_data" in params:
+                    form_data = params["form_data"]
+                    selectors = params.get("selectors")
+                elif "params" in params and isinstance(params["params"], dict):
+                    form_data = params["params"].get("form_data")
+                    selectors = params["params"].get("selectors")
+                
+                if not form_data:
+                    return {
+                        "status": "error",
+                        "message": "form_data parameter is required"
+                    }
+                
+                success = await self.browser_service.fill_form(form_data, selectors)
+                if success:
+                    return {
+                        "status": "success",
+                        "message": "Successfully filled form"
+                    }
                 return {
-                    "status": "success",
-                    "message": "Successfully filled form"
+                    "status": "error",
+                    "message": "Failed to fill form"
                 }
-            return {
-                "status": "error",
-                "message": "Failed to fill form"
-            }
+            except Exception as e:
+                logger.error(f"Error in fill_form tool: {str(e)}")
+                return {
+                    "status": "error",
+                    "message": f"Error in fill_form tool: {str(e)}"
+                }
         
         @self.mcp.tool()
-        async def click_element(params: ClickParams) -> Dict[str, Any]:
+        async def click_element(params: Dict[str, Any]) -> Dict[str, Any]:
             """Click on an element in the browser"""
-            success = await self.browser_service.click_element(params.selector)
-            if success:
+            try:
+                if "selector" in params:
+                    selector = params["selector"]
+                elif "params" in params and isinstance(params["params"], dict) and "selector" in params["params"]:
+                    selector = params["params"]["selector"]
+                else:
+                    return {
+                        "status": "error",
+                        "message": "selector parameter is required"
+                    }
+                
+                success = await self.browser_service.click_element(selector)
+                if success:
+                    return {
+                        "status": "success",
+                        "message": f"Successfully clicked element: {selector}"
+                    }
                 return {
-                    "status": "success",
-                    "message": f"Successfully clicked element: {params.selector}"
+                    "status": "error",
+                    "message": f"Failed to click element: {selector}"
                 }
-            return {
-                "status": "error",
-                "message": f"Failed to click element: {params.selector}"
-            }
+            except Exception as e:
+                logger.error(f"Error in click_element tool: {str(e)}")
+                return {
+                    "status": "error",
+                    "message": f"Error in click_element tool: {str(e)}"
+                }
         
         @self.mcp.tool()
-        async def send_email(params: EmailParams) -> Dict[str, Any]:
+        async def send_email(params: Dict[str, Any]) -> Dict[str, Any]:
             """Send an email"""
-            success = await self.email_service.send_email(
-                recipient=params.recipient,
-                subject=params.subject,
-                body=params.body,
-                cc=params.cc,
-                bcc=params.bcc,
-                is_html=params.is_html
-            )
-            if success:
+            try:
+                email_params = None
+                
+                if all(k in params for k in ["recipient", "subject", "body"]):
+                    email_params = params
+                elif "params" in params and isinstance(params["params"], dict):
+                    p = params["params"]
+                    if all(k in p for k in ["recipient", "subject", "body"]):
+                        email_params = p
+                
+                if not email_params:
+                    return {
+                        "status": "error",
+                        "message": "Required email parameters (recipient, subject, body) are missing"
+                    }
+                
+                success = await self.email_service.send_email(
+                    recipient=email_params["recipient"],
+                    subject=email_params["subject"],
+                    body=email_params["body"],
+                    cc=email_params.get("cc"),
+                    bcc=email_params.get("bcc"),
+                    is_html=email_params.get("is_html", False)
+                )
+                
+                if success:
+                    return {
+                        "status": "success",
+                        "message": f"Successfully sent email to {email_params['recipient']}"
+                    }
                 return {
-                    "status": "success",
-                    "message": f"Successfully sent email to {params.recipient}"
+                    "status": "error",
+                    "message": f"Failed to send email to {email_params['recipient']}"
                 }
-            return {
-                "status": "error",
-                "message": f"Failed to send email to {params.recipient}"
-            }
+            except Exception as e:
+                logger.error(f"Error in send_email tool: {str(e)}")
+                return {
+                    "status": "error",
+                    "message": f"Error in send_email tool: {str(e)}"
+                }
         
         @self.mcp.tool()
-        async def schedule_calendar_event(params: CalendarEventParams) -> Dict[str, Any]:
+        async def schedule_calendar_event(params: Dict[str, Any]) -> Dict[str, Any]:
             """Schedule an event in Google Calendar using a pre-configured Google Apps Script."""
-            return await CalendarService.schedule_event(params)
+            try:
+                if all(key in params for key in ["title", "start_time", "end_time"]):
+                    event_params = CalendarEventParams(**params)
+                elif "params" in params and isinstance(params["params"], dict):
+                    event_params = CalendarEventParams(**params["params"])
+                else:
+                    return {
+                        "status": "error",
+                        "message": f"Invalid parameter structure: {params}"
+                    }
+                
+                return await CalendarService.schedule_event(event_params)
+            except Exception as e:
+                logger.error(f"Error in schedule_calendar_event: {str(e)}")
+                return {
+                    "status": "error",
+                    "message": f"Error processing calendar event: {str(e)}"
+                }
         
         logger.info("MCP tools registered")
     
