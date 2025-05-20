@@ -6,10 +6,11 @@ import threading
 import asyncio
 import signal
 import sys
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket, Request
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import uuid
+from fastapi.responses import JSONResponse
 
 from layers.langchain_agent import AgentOrchestrator
 from layers.mcp_connector import MCPConnector, AlrisMCPClient
@@ -250,6 +251,68 @@ async def health_check():
         },
         "version": "2.0.0"
     }
+
+@app.post("/command")
+async def command_endpoint(request: Request):
+    try:
+        data = await request.json()
+        command = data.get("command")
+        if not command:
+            return JSONResponse(
+                status_code=400,
+                content={"type": "error", "message": "Command is required"}
+            )
+
+        thread_id = str(uuid.uuid4())
+        response = await app.state.agent_orchestrator.process_command(command, thread_id=thread_id)
+
+        message_content = ""
+        video_urls = None
+        if isinstance(response, dict):
+            if "video_urls" in response:
+                video_urls = response["video_urls"]
+            elif isinstance(response.get("result"), dict) and "video_urls" in response["result"]:
+                video_urls = response["result"]["video_urls"]
+
+        if isinstance(response, dict):
+            if "intent" in response and response["intent"] == "youtube_search":
+                if isinstance(response.get("result"), dict):
+                    message_content = response["result"].get("message", "")
+            elif isinstance(response.get("result"), dict):
+                if "message" in response["result"]:
+                    message_content = response["result"]["message"]
+                elif "result" in response["result"]:
+                    message_content = response["result"]["result"]
+                else:
+                    message_content = str(response["result"])
+            else:
+                message_content = str(response.get("result", response))
+        else:
+            message_content = str(response)
+
+        api_response = {
+            "type": "response",
+            "data": message_content,
+            "metadata": {}
+        }
+
+        if video_urls:
+            api_response["video_urls"] = video_urls
+            api_response["metadata"]["content_type"] = "youtube_videos"
+            api_response["metadata"]["query"] = response.get("result", {}).get("query", "")
+            api_response["metadata"]["count"] = len(video_urls)
+
+        if isinstance(response, dict) and "intent" in response:
+            api_response["metadata"]["intent"] = response["intent"]
+
+        return JSONResponse(content=api_response)
+
+    except Exception as e:
+        logger.error(f"Error in /command endpoint: {e}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={"type": "error", "message": str(e)}
+        )
 
 if __name__ == "__main__":
     import uvicorn
