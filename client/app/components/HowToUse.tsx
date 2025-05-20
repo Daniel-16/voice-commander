@@ -11,7 +11,7 @@ const steps = [
     title: "Launch Alris",
     description:
       "Start your journey with Alris in your browser. No downloads, no waiting - just instant AI assistance.",
-    code: "# Access Alris\nVisit: app.alris.ai\nStatus: Ready to assist",
+    code: "# Access Alris\nVisit: alris-ai.vercel.app\nStatus: Ready to assist",
   },
   {
     icon: <FaMicrophone className="w-6 h-6" />,
@@ -24,7 +24,7 @@ const steps = [
     icon: <FaPlay className="w-6 h-6" />,
     title: "Watch It Work",
     description:
-      "Sit back as Alris handles your web tasks. Complex workflows simplified into single commands.",
+      "Sit back as Alris handles your tasks. Complex workflows simplified into single commands.",
     code: "# Task Execution\nAnalyzing request...\nNavigating to service...\nTask completed ✓",
   },
 ];
@@ -81,7 +81,7 @@ const HowToUse = () => {
             </span>
           </h2>
           <p className="mt-6 text-xl text-gray-400 max-w-2xl mx-auto">
-            Experience the future of web automation with Alris's intuitive
+            Experience the future of automation with Alris's intuitive
             interface
           </p>
         </motion.div>

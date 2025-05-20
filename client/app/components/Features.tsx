@@ -148,11 +148,10 @@ const Features = () => {
           className="text-center"
         >
           <h2 className="text-3xl font-extrabold sm:text-4xl bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
-            Your Browser, Supercharged with AI
+            Your AI Assistant That Gets Things Done
           </h2>
           <p className="mt-4 max-w-2xl mx-auto text-xl text-gray-400">
-            Experience a smarter way to browse with features that make your
-            digital life easier.
+            Experience the power of AI-driven automation with Alris. Simply speak or type your needs, and watch as complex tasks are handled effortlessly. Let Alris do the heavy lifting while you focus on what matters most.
           </p>
         </motion.div>
 

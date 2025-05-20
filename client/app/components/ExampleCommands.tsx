@@ -5,20 +5,20 @@ import { useInView } from "react-intersection-observer";
 
 const commands = [
   {
-    command: "Schedule a meeting with John",
-    description: "Alris will help you set up a meeting with your contacts",
+    command: "Schedule an event on my calendar",
+    description: "Alris will help you set up a create events on your calendar",
     icon: "📅",
   },
   {
-    command: "Play me a dog video",
-    description: "Instantly find and play videos that match your interests",
+    command: "Show me tutorials on Introduction to React",
+    description: "Instantly find and play YouTube videos that match your request",
     icon: "🎦",
   },
-  {
-    command: "Play Pop Music on Spotify",
-    description: "Control your favorite music streaming services",
-    icon: "🎵",
-  },
+  // {
+  //   command: "Play Pop Music on Spotify",
+  //   description: "Control your favorite music streaming services",
+  //   icon: "🎵",
+  // },
 ];
 
 const CommandCard = ({
