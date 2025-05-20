@@ -153,11 +153,7 @@ export default function ChatPage() {
     setIsProcessing(true);
     setError(null);
 
-    const newValue = remainingMessages - 1;
-    setRemainingMessages(newValue);
-
     try {
-      await updateMessageLimits(newValue);
       setInputText("");
       setTimeout(scrollToBottom, 100);
 
@@ -181,6 +177,9 @@ export default function ChatPage() {
         setMessages((prev) => [...prev, newAssistantMessage]);
         setIsProcessing(false);
         setError(null);
+        const newValue = remainingMessages - 1;
+        setRemainingMessages(newValue);
+        await updateMessageLimits(newValue);
       } else if (data.type === "error") {
         setError(
           data.message || "An error occurred while processing your request."
@@ -188,7 +187,9 @@ export default function ChatPage() {
         setIsProcessing(false);
       }
     } catch (err) {
-      setError("Failed to send message. Please try again.");
+      setError(
+        "Failed to send message. Please check your internet connection or refresh the page."
+      );
       setIsProcessing(false);
     }
   };
