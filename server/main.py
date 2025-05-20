@@ -14,6 +14,7 @@ import uuid
 from layers.langchain_agent import AgentOrchestrator
 from layers.mcp_connector import MCPConnector, AlrisMCPClient
 from layers.external_services import BrowserService
+from layers.speech_recognition import WakeWordDetector, SpeechRecognizer
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -31,6 +32,11 @@ mcp_connector = None
 shutdown_requested = False
 shutdown_lock = threading.Lock()
 
+# Speech recognition components
+wake_word_detector = None
+speech_recognizer = None
+active_websocket = None
+
 def handle_sigterm(*args):
     global shutdown_requested
     with shutdown_lock:
@@ -40,13 +46,36 @@ def handle_sigterm(*args):
 
 signal.signal(signal.SIGTERM, handle_sigterm)
 
+def on_wake_word_detected(detected: bool):
+    """Callback for when wake word is detected"""
+    if detected and speech_recognizer:
+        logger.info("Wake word detected, starting speech recognition")
+        speech_recognizer.start(on_speech_recognized)
+
+def on_speech_recognized(text: str):
+    """Callback for when speech is recognized"""
+    logger.info(f"Speech recognized: {text}")
+    if active_websocket:
+        asyncio.run(active_websocket.send_text(json.dumps({
+            "type": "speech_command",
+            "command": text
+        })))
+    speech_recognizer.stop()
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global mcp_client, mcp_thread, mcp_connector
+    global mcp_client, mcp_thread, mcp_connector, wake_word_detector, speech_recognizer
     
     logger.info("Starting Alris server with layered architecture")
     
     try:
+        # Initialize speech recognition components
+        wake_word_detector = WakeWordDetector()
+        speech_recognizer = SpeechRecognizer()
+        
+        # Start wake word detection
+        wake_word_detector.start(on_wake_word_detected)
+        
         if mcp_connector is None:
             mcp_connector = MCPConnector()
             logger.info("MCP connector initialized with calendar tool registered")
@@ -55,13 +84,11 @@ async def lifespan(app: FastAPI):
             mcp_thread = threading.Thread(target=mcp_connector.run, daemon=True)
             mcp_thread.start()
             logger.info("MCP connector server thread started")
-            # Give the MCP server a moment to initialize
             await asyncio.sleep(1)
         
         if mcp_client is None:
             mcp_client = AlrisMCPClient()
             
-            # Try to connect with retries
             max_retries = 3
             retry_count = 0
             connected = False
@@ -92,6 +119,12 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         logger.info("FastAPI application shutting down")
+        
+        # Stop speech recognition components
+        if wake_word_detector:
+            wake_word_detector.stop()
+        if speech_recognizer:
+            speech_recognizer.stop()
         
         if mcp_client and hasattr(mcp_client, 'disconnect'):
             try:
@@ -131,8 +164,10 @@ app.add_middleware(
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
+    global active_websocket
     logger.info("Received WebSocket connection")
     await websocket.accept()
+    active_websocket = websocket
     
     thread_id = str(uuid.uuid4())
     logger.debug(f"Generated thread ID for connection: {thread_id}")
@@ -220,6 +255,7 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         logger.error(f"WebSocket error: {e}", exc_info=True)
     finally:
+        active_websocket = None
         await websocket.close()
 
 @app.get("/health")
@@ -246,6 +282,10 @@ async def health_check():
             "websocket": {
                 "status": "available",
                 "endpoint": "/ws"
+            },
+            "speech_recognition": {
+                "wake_word_detector": "running" if wake_word_detector and wake_word_detector.is_listening else "stopped",
+                "speech_recognizer": "running" if speech_recognizer and speech_recognizer.is_listening else "stopped"
             }
         },
         "version": "2.0.0"
