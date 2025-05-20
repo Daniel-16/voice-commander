@@ -38,6 +38,8 @@ export default function ChatPage() {
   const socketRef = useRef<WebSocket | null>(null);
   const { user } = useAuth();
   const [isVideoCommand, setIsVideoCommand] = useState(false);
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const MAX_RECONNECT_ATTEMPTS = 5;
 
   useEffect(() => {
     const initializeMessageLimits = async () => {
@@ -76,7 +78,7 @@ export default function ChatPage() {
     socket.onclose = () => {
       setIsConnected(false);
       setError(
-        "Connection lost. Please check your internet connection and try again."
+        "Connection lost. Please check your internet connection and try again or refresh the page."
       );
     };
 
@@ -119,6 +121,83 @@ export default function ChatPage() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        if (
+          (!socketRef.current ||
+            socketRef.current.readyState === WebSocket.CLOSED) &&
+          reconnectAttempts < MAX_RECONNECT_ATTEMPTS
+        ) {
+          const newSocket = getSocket();
+          socketRef.current = newSocket;
+
+          newSocket.onopen = () => {
+            setIsConnected(true);
+            setError(null);
+            setReconnectAttempts(0);
+          };
+
+          newSocket.onclose = () => {
+            setIsConnected(false);
+            setError(
+              "Connection lost. Please check your internet connection and try again or refresh the page."
+            );
+          };
+
+          newSocket.onerror = () => {
+            setError(
+              "Unable to connect to the server. Please try again later."
+            );
+          };
+
+          newSocket.onmessage = (event) => {
+            try {
+              const response = JSON.parse(event.data);
+              if (response.type === "response") {
+                const mainMessage = response.data.split("\n")[0];
+                const newMessage: Message = {
+                  type: "assistant",
+                  content: mainMessage,
+                  timestamp: new Date().toISOString(),
+                  video_urls: response.video_urls,
+                };
+                setMessages((prev) => [...prev, newMessage]);
+                setIsProcessing(false);
+                setError(null);
+              } else if (response.type === "error") {
+                console.error("Server error:", response.message);
+                setError(
+                  response.message ||
+                    "An error occurred while processing your request."
+                );
+                setIsProcessing(false);
+              }
+            } catch (error) {
+              console.error("Error parsing message:", error);
+              setError("Something went wrong. Please try again.");
+              setIsProcessing(false);
+            }
+          };
+
+          setReconnectAttempts((prev) => prev + 1);
+        } else if (
+          (!socketRef.current ||
+            socketRef.current.readyState === WebSocket.CLOSED) &&
+          reconnectAttempts >= MAX_RECONNECT_ATTEMPTS
+        ) {
+          setError(
+            `Unable to reconnect after ${MAX_RECONNECT_ATTEMPTS} attempts. Please refresh the page.`
+          );
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [reconnectAttempts]);
 
   useEffect(() => {
     const checkMobile = () => {
