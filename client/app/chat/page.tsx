@@ -9,7 +9,7 @@ import NotLaunched from "../components/NotLaunched";
 import ChatNavbar from "../components/ChatNavbar";
 import ChatSidebar from "../components/ChatSidebar";
 import { useAuth } from "../utils/AuthContext";
-import getSocket, { sendMessage } from "@/lib/socket";
+import getSocket, { sendMessage, disconnectSocket } from "@/lib/socket";
 import VideoGrid from "@/components/VideoGrid";
 import { getMessageLimits, updateMessageLimits } from "../actions/cookies";
 import ProcessingMessage from "@/components/ProcessingMessage";
@@ -23,11 +23,11 @@ interface Message {
 }
 
 export default function ChatPage() {
-  const isProd = process.env.NODE_ENV === "production";
+  // const isProd = process.env.NODE_ENV === "production";
   const [isMobile, setIsMobile] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
-  const [isRecording, setIsRecording] = useState(false);
+  // const [isRecording, setIsRecording] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const [showLimitTooltip, setShowLimitTooltip] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
@@ -40,6 +40,9 @@ export default function ChatPage() {
   const [isVideoCommand, setIsVideoCommand] = useState(false);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const MAX_RECONNECT_ATTEMPTS = 5;
+  const [isReconnecting, setIsReconnecting] = useState(false);
+  const retryIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const initializeMessageLimits = async () => {
@@ -66,26 +69,21 @@ export default function ChatPage() {
     initializeMessageLimits();
   }, []);
 
-  useEffect(() => {
-    const socket = getSocket();
-    socketRef.current = socket;
-
+  const attachSocketHandlers = (socket: WebSocket) => {
     socket.onopen = () => {
       setIsConnected(true);
       setError(null);
+      setReconnectAttempts(0);
     };
-
     socket.onclose = () => {
       setIsConnected(false);
       setError(
         "Connection lost. Please check your internet connection and try again or refresh the page."
       );
     };
-
     socket.onerror = () => {
       setError("Unable to connect to the server. Please try again later.");
     };
-
     socket.onmessage = (event) => {
       try {
         const response = JSON.parse(event.data);
@@ -114,7 +112,12 @@ export default function ChatPage() {
         setIsProcessing(false);
       }
     };
+  };
 
+  useEffect(() => {
+    const socket = getSocket();
+    socketRef.current = socket;
+    attachSocketHandlers(socket);
     return () => {
       if (socket && socket.readyState === WebSocket.OPEN) {
         socket.close();
@@ -132,55 +135,7 @@ export default function ChatPage() {
         ) {
           const newSocket = getSocket();
           socketRef.current = newSocket;
-
-          newSocket.onopen = () => {
-            setIsConnected(true);
-            setError(null);
-            setReconnectAttempts(0);
-          };
-
-          newSocket.onclose = () => {
-            setIsConnected(false);
-            setError(
-              "Connection lost. Please check your internet connection and try again or refresh the page."
-            );
-          };
-
-          newSocket.onerror = () => {
-            setError(
-              "Unable to connect to the server. Please try again later."
-            );
-          };
-
-          newSocket.onmessage = (event) => {
-            try {
-              const response = JSON.parse(event.data);
-              if (response.type === "response") {
-                const mainMessage = response.data.split("\n")[0];
-                const newMessage: Message = {
-                  type: "assistant",
-                  content: mainMessage,
-                  timestamp: new Date().toISOString(),
-                  video_urls: response.video_urls,
-                };
-                setMessages((prev) => [...prev, newMessage]);
-                setIsProcessing(false);
-                setError(null);
-              } else if (response.type === "error") {
-                console.error("Server error:", response.message);
-                setError(
-                  response.message ||
-                    "An error occurred while processing your request."
-                );
-                setIsProcessing(false);
-              }
-            } catch (error) {
-              console.error("Error parsing message:", error);
-              setError("Something went wrong. Please try again.");
-              setIsProcessing(false);
-            }
-          };
-
+          attachSocketHandlers(newSocket);
           setReconnectAttempts((prev) => prev + 1);
         } else if (
           (!socketRef.current ||
@@ -272,9 +227,86 @@ export default function ChatPage() {
     }
   };
 
+  useEffect(() => {
+    if (isReconnecting && pendingMessage) {
+      if (retryIntervalRef.current) return;
+      retryIntervalRef.current = setInterval(async () => {
+        disconnectSocket();
+        const newSocket = getSocket();
+        socketRef.current = newSocket;
+        attachSocketHandlers(newSocket);
+        let didReconnect = false;
+        await new Promise<void>((resolve) => {
+          newSocket.onopen = () => {
+            setIsConnected(true);
+            setError(null);
+            setReconnectAttempts(0);
+            setIsReconnecting(false);
+            didReconnect = true;
+            resolve();
+          };
+          newSocket.onerror = () => {
+            resolve();
+          };
+          setTimeout(() => {
+            resolve();
+          }, 2000);
+        });
+        if (
+          didReconnect &&
+          socketRef.current &&
+          socketRef.current.readyState === WebSocket.OPEN
+        ) {
+          const videoRegex = /(youtube\.com|youtu\.be|play (a )?video|video)/i;
+          setIsVideoCommand(videoRegex.test(pendingMessage));
+          const newMessage: Message = {
+            type: "user",
+            content: pendingMessage,
+            timestamp: new Date().toISOString(),
+          };
+          setMessages((prev) => [...prev, newMessage]);
+          setIsProcessing(true);
+          setError(null);
+          setIsReconnecting(false);
+          setPendingMessage(null);
+          const newValue = remainingMessages - 1;
+          setRemainingMessages(newValue);
+          try {
+            await updateMessageLimits(newValue);
+            if (socketRef.current) {
+              socketRef.current.send(
+                JSON.stringify({
+                  command: pendingMessage,
+                })
+              );
+            }
+            setInputText("");
+            setTimeout(scrollToBottom, 100);
+          } catch (err) {
+            setError("Failed to send message. Please try again.");
+            setIsProcessing(false);
+          }
+          clearInterval(retryIntervalRef.current!);
+          retryIntervalRef.current = null;
+        }
+      }, 3000);
+    } else if (!isReconnecting && retryIntervalRef.current) {
+      clearInterval(retryIntervalRef.current);
+      retryIntervalRef.current = null;
+    }
+    return () => {
+      if (retryIntervalRef.current) {
+        clearInterval(retryIntervalRef.current);
+        retryIntervalRef.current = null;
+      }
+    };
+  }, [isReconnecting, pendingMessage, remainingMessages]);
+
   const handleSendMessage = async () => {
     if (!inputText.trim()) return;
     if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+      setIsReconnecting(true);
+      setPendingMessage(inputText);
       setError("Not connected to server. Please wait or refresh the page.");
       return;
     }
@@ -297,6 +329,8 @@ export default function ChatPage() {
     setMessages((prev) => [...prev, newMessage]);
     setIsProcessing(true);
     setError(null);
+    setIsReconnecting(false);
+    setPendingMessage(null);
 
     const newValue = remainingMessages - 1;
     setRemainingMessages(newValue);
@@ -349,6 +383,11 @@ export default function ChatPage() {
               </h1>
               <div className="w-full max-w-[600px] px-4">
                 {errorAlert}
+                {isReconnecting && (
+                  <div className="text-center text-yellow-400 mb-2">
+                    Reconnecting...
+                  </div>
+                )}
                 <form
                   className="relative"
                   onSubmit={(e) => {
@@ -401,10 +440,15 @@ export default function ChatPage() {
                 style={{
                   overflowY: "auto",
                   overscrollBehaviorY: "contain",
-                  height: "calc(100vh - 200px)",
+                  height: "calc(100vh - 180px)",
                 }}
               >
                 {errorAlert}
+                {isReconnecting && (
+                  <div className="text-center text-yellow-400 mb-2">
+                    Reconnecting...
+                  </div>
+                )}
                 {messages.map((message, index) => (
                   <motion.div
                     key={index}
@@ -420,7 +464,7 @@ export default function ChatPage() {
                         message.type === "user" ? "bg-blue-500" : "bg-[#1C1C27]"
                       }`}
                     >
-                      <p className="text-[13px] md:text-sm text-white break-words">
+                      <p className="text-md md:text-sm text-white break-words">
                         {message.content}
                       </p>
                     </div>
@@ -450,6 +494,11 @@ export default function ChatPage() {
 
               <div className="sticky-bottom mb-4 w-full max-w-4xl px-4 mx-auto">
                 {errorAlert}
+                {isReconnecting && (
+                  <div className="text-center text-yellow-400 mb-2">
+                    Reconnecting...
+                  </div>
+                )}
                 <form
                   className="relative"
                   onSubmit={(e) => {
