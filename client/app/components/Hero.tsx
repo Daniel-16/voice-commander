@@ -17,12 +17,12 @@ const Hero = () => {
       icon: <FaRobot className="w-6 h-6 text-purple-400" />,
       title: "Natural Language Control",
       description:
-        "Interact with web services using simple voice or text commands",
+        "Interact with services using simple voice or text commands",
     },
     {
       icon: <FaTerminal className="w-6 h-6 text-blue-400" />,
-      title: "Browser Automation",
-      description: "Automate web tasks and workflows seamlessly",
+      title: "Automated Actions",
+      description: "Automate tasks and workflows seamlessly",
     },
     {
       icon: <FaCode className="w-6 h-6 text-green-400" />,
@@ -59,7 +59,7 @@ const Hero = () => {
           >
             <div className="block bg-clip-text text-transparent bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600 bg-[length:200%_auto] animate-gradient mt-2">
               <span className="block">Your AI Assistant That</span>
-              <span>Actually Gets Web Tasks Done</span>
+              <span>Actually Gets Tasks Done</span>
             </div>
           </motion.h1>
 
@@ -69,9 +69,9 @@ const Hero = () => {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="mt-8 text-sm md:text-xl text-purple-200 max-w-2xl mx-auto"
           >
-            Alris turns your voice or text commands into automated web actions.
-            No more context switching, no more manual browsing - just tell Alris
-            what you need done online.
+            Alris turns your voice or text commands into automated actions.
+            No more context switching, no more manual work - just tell Alris
+            what you need done.
           </motion.p>
 
           <motion.div
