@@ -94,7 +94,6 @@ async def handle_twitter_intent(command: str, mcp_client) -> Dict[str, Any]:
                             "message": f"Failed to post tweet: {error_msg}"
                         }
                 else:
-                    # Success case
                     return {
                         "status": "success",
                         "message": f"Successfully posted tweet: '{tweet_text}'",
@@ -103,7 +102,6 @@ async def handle_twitter_intent(command: str, mcp_client) -> Dict[str, Any]:
                         "tweet_url": response_data.get("tweet_url", "")
                     }
             except json.JSONDecodeError:
-                # If not valid JSON, handle as plain text
                 if "Error executing tool" in content_text or result.isError:
                     logger.error(f"Error from Twitter API: {content_text}")
                     return {
@@ -117,7 +115,6 @@ async def handle_twitter_intent(command: str, mcp_client) -> Dict[str, Any]:
                         "tweet_text": tweet_text
                     }
         else:
-            # Handle dictionary-type response (for backward compatibility)
             if isinstance(result, dict) and result.get("status") == "success":
                 return {
                     "status": "success",

@@ -30,7 +30,6 @@ class TwitterService:
                 logger.warning("Bearer token only provides read access, not write access for posting tweets")
                 return
             
-            # Initialize with v1.1 and v2 access
             auth = tweepy.OAuth1UserHandler(
                 api_key, 
                 api_secret,
@@ -39,7 +38,6 @@ class TwitterService:
             )
             api_v1 = tweepy.API(auth)
             
-            # Test if we have write permissions
             try:
                 verify_credentials = api_v1.verify_credentials(skip_status=True)
                 if hasattr(verify_credentials, 'verified') and verify_credentials.verified:
@@ -47,7 +45,6 @@ class TwitterService:
             except Exception as e:
                 logger.warning(f"Failed to verify write permissions: {str(e)}")
             
-            # Initialize v2 client
             self._client = tweepy.Client(
                 consumer_key=api_key,
                 consumer_secret=api_secret,
@@ -89,7 +86,6 @@ class TwitterService:
             error_msg = str(e)
             logger.error(f"Error posting tweet: {error_msg}")
             
-            # Provide helpful guidance based on error type
             if "403 Forbidden" in error_msg and "oauth1 app permissions" in error_msg:
                 return {
                     "status": "error",
