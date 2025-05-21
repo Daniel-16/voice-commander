@@ -8,8 +8,19 @@ from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.messages import HumanMessage
 from langchain.agents import Tool
+from pydantic import BaseModel
+from langchain_core.callbacks import Callbacks
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 logger = logging.getLogger("langchain_agent.react")
+
+# Patch for Pydantic v2 compatibility. you need Pydantic v2  i did this because its required in v2 but not in v1
+ChatGoogleGenerativeAI.BaseCache = BaseModel
+ChatGoogleGenerativeAI.Callbacks = Callbacks
+ChatGoogleGenerativeAI.model_rebuild()
+
+
+
 
 class BaseReactAgent(ABC):
     def __init__(self, model_name: Optional[str] = None):
