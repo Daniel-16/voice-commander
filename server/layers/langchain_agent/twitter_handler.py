@@ -30,20 +30,16 @@ async def handle_twitter_intent(command: str, mcp_client) -> Dict[str, Any]:
         }
     
     try:
-        # Extract tweet content from command
-        # First, try to extract content enclosed in quotes
         quote_match = re.search(r"['\"]([^'\"]+)['\"]", command)
         if quote_match:
             tweet_text = quote_match.group(1).strip()
             logger.info(f"Extracted tweet text from quotes: {tweet_text}")
         else:
-            # Next, try to match patterns like "text should be 'Hey there'" or "should say 'Hello world'"
             content_match = re.search(r"(?:should\s+be|should\s+say|text\s+is|content\s+is|text|content)['\s]+([^'\"]+)['\"]?", command.lower())
             if content_match:
                 tweet_text = content_match.group(1).strip()
                 logger.info(f"Extracted tweet text from 'should be/say' pattern: {tweet_text}")
             else:
-                # Otherwise use standard regex pattern matching
                 match = re.search(r'(?:post|tweet|write|create|send|publish)(?:\s+a|\s+an)?(?:\s+inspiring|\s+new|\s+interesting)?\s+tweet(?:\s+about|\s+on)?\s+(.+?)(?:$|\s+to\s+twitter|\s+on\s+twitter)', command.lower())
                 
                 tweet_text = None
@@ -55,26 +51,20 @@ async def handle_twitter_intent(command: str, mcp_client) -> Dict[str, Any]:
                     cleaned_text = re.sub(r'(?:\s+to\s+twitter|\s+on\s+twitter)', '', cleaned_text)
                     tweet_text = cleaned_text.strip()
                 
-                # Remove phrases like "text should be" or "content should say"
                 tweet_text = re.sub(r'(?:text|content)\s+should\s+(?:be|say)', '', tweet_text).strip()
                 
-                # Clean up any remaining quotes
                 tweet_text = tweet_text.strip('\'"').strip()
         
         logger.info(f"Final tweet content: {tweet_text}")
         
-        # Call the MCP tool with proper parameter structure
         result = await mcp_client.call_tool("post_tweet", {"params": {"text": tweet_text}})
         
-        # Correctly handle the MCP tool result based on its structure
         if hasattr(result, "content") and result.content:
-            # Parse the content text as it contains the JSON response
             content_text = result.content[0].text if result.content[0].text else ""
             
             try:
                 response_data = json.loads(content_text)
                 
-                # Check if it's an error message
                 if response_data.get("status") == "error":
                     error_msg = response_data.get("message", "Unknown error")
                     resolution = response_data.get("resolution", "")
