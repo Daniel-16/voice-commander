@@ -11,10 +11,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import uuid
 from fastapi.responses import JSONResponse
-
 from layers.langchain_agent import AgentOrchestrator
 from layers.mcp_connector import MCPConnector, AlrisMCPClient
-from layers.external_services import BrowserService
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -56,13 +54,11 @@ async def lifespan(app: FastAPI):
             mcp_thread = threading.Thread(target=mcp_connector.run, daemon=True)
             mcp_thread.start()
             logger.info("MCP connector server thread started")
-            # Give the MCP server a moment to initialize
             await asyncio.sleep(1)
         
         if mcp_client is None:
             mcp_client = AlrisMCPClient()
             
-            # Try to connect with retries
             max_retries = 3
             retry_count = 0
             connected = False
