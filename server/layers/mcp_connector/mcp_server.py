@@ -266,14 +266,11 @@ class MCPConnector:
             try:
                 text = None
                 
-                # Handle both direct parameter and nested params structure
                 if "text" in params:
                     text = params["text"]
                 elif "params" in params and isinstance(params["params"], dict) and "text" in params["params"]:
                     text = params["params"]["text"]
-                # Special case for when params is passed directly and isn't nested
                 elif all(k != "params" for k in params.keys()) and len(params) == 1 and isinstance(next(iter(params.values())), dict):
-                    # This handles cases where the client passes {some_key: {text: value}}
                     nested_params = next(iter(params.values()))
                     if "text" in nested_params:
                         text = nested_params["text"]
