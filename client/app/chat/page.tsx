@@ -13,7 +13,7 @@ import getSocket, { sendMessage, disconnectSocket } from "@/lib/socket";
 import VideoGrid from "@/components/VideoGrid";
 import { getMessageLimits, updateMessageLimits } from "../actions/cookies";
 import ProcessingMessage from "@/components/ProcessingMessage";
-// import { HiLink } from "react-icons/hi";
+import { VoiceCommandInterface } from "@/components/VoiceCommandInterface";
 
 interface Message {
   type: "user" | "assistant";
@@ -23,11 +23,9 @@ interface Message {
 }
 
 export default function ChatPage() {
-  // const isProd = process.env.NODE_ENV === "production";
   const [isMobile, setIsMobile] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
-  // const [isRecording, setIsRecording] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const [showLimitTooltip, setShowLimitTooltip] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
@@ -183,15 +181,6 @@ export default function ChatPage() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
-  // if (isProd) {
-  //   return (
-  //     <>
-  //       <ChatNavbar />
-  //       <NotLaunched />
-  //     </>
-  //   );
-  // }
 
   const errorAlert = error && (
     <motion.div
@@ -352,12 +341,60 @@ export default function ChatPage() {
     }
   };
 
+  const handleVoiceCommand = async (command: string) => {
+    if (!command.trim()) return;
+    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+      setIsReconnecting(true);
+      setPendingMessage(command);
+      setError("Not connected to server. Please wait or refresh the page.");
+      return;
+    }
+    if (remainingMessages <= 0) {
+      setError(
+        "Message limit reached. Please wait 24 hours for your limit to reset."
+      );
+      return;
+    }
+
+    const videoRegex = /(youtube\.com|youtu\.be|play (a )?video|video)/i;
+    setIsVideoCommand(videoRegex.test(command));
+
+    const newMessage: Message = {
+      type: "user",
+      content: command,
+      timestamp: new Date().toISOString(),
+    };
+
+    setMessages((prev) => [...prev, newMessage]);
+    setIsProcessing(true);
+    setError(null);
+    setIsReconnecting(false);
+    setPendingMessage(null);
+
+    const newValue = remainingMessages - 1;
+    setRemainingMessages(newValue);
+
+    try {
+      await updateMessageLimits(newValue);
+      if (socketRef.current) {
+        socketRef.current.send(
+          JSON.stringify({
+            command: command,
+          })
+        );
+      }
+      setTimeout(scrollToBottom, 100);
+    } catch (err) {
+      setError("Failed to send message. Please try again.");
+      setIsProcessing(false);
+    }
+  };
+
   return (
     <div className="relative min-h-screen bg-[#0A0A0F] text-white overflow-hidden">
       <ChatNavbar />
       <ChatSidebar isMobile={isMobile} />
       <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
-      {/* <BackgroundBeams className="opacity-20" /> */}
       <div className="absolute inset-0 md:pl-64 flex flex-col mx-auto transition-all duration-300">
         <div className="absolute inset-0 md:pl-64 transition-all duration-300">
           <div className="absolute inset-0 opacity-30">
@@ -388,48 +425,36 @@ export default function ChatPage() {
                     Reconnecting...
                   </div>
                 )}
-                <form
-                  className="relative"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setShowTooltip(true)}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full transition-colors text-gray-400 opacity-50 cursor-not-allowed"
-                  >
-                    <FaMicrophone className="w-4 h-4" />
-                  </button>
-                  <AnimatePresence>
-                    {showTooltip && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 10 }}
-                        className="absolute left-0 bottom-full mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-lg whitespace-nowrap"
-                      >
-                        Voice command is not activated as of now
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                  <input
-                    type="text"
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Give Alris a task"
-                    className="w-full px-12 py-4 bg-[#1C1C27] text-white placeholder-gray-500 text-[15px] rounded-4xl focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-all"
+                <div className="space-y-4">
+                  <VoiceCommandInterface
+                    onCommand={handleVoiceCommand}
+                    isProcessing={isProcessing}
+                    error={error}
                   />
-                  <button
-                    type="submit"
-                    disabled={!inputText.trim()}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full transition-colors text-gray-400 hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  <form
+                    className="relative"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }}
                   >
-                    <FaPaperPlane className="w-4 h-4" />
-                  </button>
-                </form>
+                    <input
+                      type="text"
+                      value={inputText}
+                      onChange={(e) => setInputText(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Give Alris a task"
+                      className="w-full px-12 py-4 bg-[#1C1C27] text-white placeholder-gray-500 text-[15px] rounded-4xl focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-all"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!inputText.trim()}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full transition-colors text-gray-400 hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <FaPaperPlane className="w-4 h-4" />
+                    </button>
+                  </form>
+                </div>
               </div>
             </motion.div>
           ) : (
@@ -499,61 +524,61 @@ export default function ChatPage() {
                     Reconnecting...
                   </div>
                 )}
-                <form
-                  className="relative"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setShowTooltip(true)}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full transition-colors text-gray-400 opacity-50 cursor-not-allowed"
-                  >
-                    <FaMicrophone className="w-4 h-4" />
-                  </button>
-                  <div className="absolute right-12 top-1/2 -translate-y-1/2 flex items-center">
-                    <div
-                      className="relative"
-                      onMouseEnter={() => setShowLimitTooltip(true)}
-                      onMouseLeave={() => setShowLimitTooltip(false)}
-                    >
-                      <div className="flex items-center gap-1 text-gray-400">
-                        <IoInformationCircle className="w-4 h-4" />
-                        <span className="text-sm">{remainingMessages}</span>
-                      </div>
-                      <AnimatePresence>
-                        {showLimitTooltip && (
-                          <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 10 }}
-                            className="absolute right-0 bottom-full mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-lg whitespace-nowrap"
-                          >
-                            {remainingMessages} message
-                            {remainingMessages !== 1 ? "s" : ""} remaining today
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  </div>
-                  <input
-                    type="text"
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Give Alris a task"
-                    className="w-full py-3 px-12 md:py-4 bg-[#1C1C27] text-white placeholder-gray-500 text-[15px] rounded-4xl focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-all"
+                <div className="space-y-4">
+                  <VoiceCommandInterface
+                    onCommand={handleVoiceCommand}
+                    isProcessing={isProcessing}
+                    error={error}
                   />
-                  <button
-                    type="submit"
-                    disabled={!inputText.trim()}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full transition-colors text-gray-400 hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  <form
+                    className="relative"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }}
                   >
-                    <FaPaperPlane className="w-4 h-4" />
-                  </button>
-                </form>
+                    <div className="absolute right-12 top-1/2 -translate-y-1/2 flex items-center">
+                      <div
+                        className="relative"
+                        onMouseEnter={() => setShowLimitTooltip(true)}
+                        onMouseLeave={() => setShowLimitTooltip(false)}
+                      >
+                        <div className="flex items-center gap-1 text-gray-400">
+                          <IoInformationCircle className="w-4 h-4" />
+                          <span className="text-sm">{remainingMessages}</span>
+                        </div>
+                        <AnimatePresence>
+                          {showLimitTooltip && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: 10 }}
+                              className="absolute right-0 bottom-full mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-lg whitespace-nowrap"
+                            >
+                              {remainingMessages} message
+                              {remainingMessages !== 1 ? "s" : ""} remaining today
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </div>
+                    <input
+                      type="text"
+                      value={inputText}
+                      onChange={(e) => setInputText(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Give Alris a task"
+                      className="w-full py-3 px-12 md:py-4 bg-[#1C1C27] text-white placeholder-gray-500 text-[15px] rounded-4xl focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-all"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!inputText.trim()}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full transition-colors text-gray-400 hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <FaPaperPlane className="w-4 h-4" />
+                    </button>
+                  </form>
+                </div>
                 <p className="text-xs text-gray-500 mt-2 text-center">
                   Alris can make mistakes. Check for verification of content.
                 </p>
